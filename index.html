@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lot Builder — TCGplayer Scan &amp; Identify</title>
+<meta name="description" content="Build bulk card lots from TCGplayer Scan &amp; Identify exports. Scryfall enrichment, set filtering, rarity targeting, singles pull, and single-pass pull sheet.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --ink:#1a1814;--ink2:#6b6760;--ink3:#a8a5a0;
+  --surface:#faf9f7;--surface2:#f2f0ec;--surface3:#e8e5df;
+  --accent:#c8a96e;--teal:#2d7d6f;--teal-bg:#eaf4f2;--teal-text:#1a4f47;
+  --purple-bg:#eeecf8;--purple-text:#3d3589;
+  --amber-bg:#fdf3e3;--amber-text:#7a4e10;
+  --border:rgba(26,24,20,0.12);--border2:rgba(26,24,20,0.22);
+  --radius:4px;--radius-lg:8px;
+  --mono:'DM Mono',monospace;--display:'Syne',sans-serif;
+  --page-bg:#f5f3ef;
+}
+html{background:var(--page-bg);}
+body{
+  background:var(--page-bg);
+  font-family:var(--display);
+  color:var(--ink);
+  min-height:100vh;
+  padding:0 1rem 4rem;
+}
+.app{padding:2rem 0;max-width:960px;margin:0 auto;}
+
+.site-header{
+  display:flex;align-items:baseline;justify-content:space-between;
+  margin-bottom:2rem;padding-bottom:1.25rem;
+  border-bottom:1px solid var(--border);
+}
+.wordmark{display:flex;align-items:baseline;gap:10px;}
+.wordmark-title{font-size:22px;font-weight:700;letter-spacing:-0.02em;color:var(--ink);}
+.wordmark-sub{font-size:12px;color:var(--ink3);font-family:var(--mono);letter-spacing:0.06em;}
+.site-version{font-size:11px;font-family:var(--mono);color:var(--ink3);}
+
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.25rem 1.5rem;margin-bottom:1rem;}
+.step-label{font-size:11px;font-weight:500;letter-spacing:0.08em;color:var(--ink2);text-transform:uppercase;margin-bottom:0.75rem;}
+.upload-zone{border:1.5px dashed var(--border2);border-radius:var(--radius-lg);padding:2rem;text-align:center;cursor:pointer;transition:background 0.15s,border-color 0.15s;}
+.upload-zone:hover{background:var(--surface2);border-color:var(--accent);}
+.upload-zone.has-file{border-style:solid;border-color:var(--teal);background:var(--teal-bg);}
+.upload-icon{width:36px;height:36px;margin:0 auto 0.75rem;border:1.5px solid var(--border2);border-radius:var(--radius);display:flex;align-items:center;justify-content:center;}
+.upload-icon svg{width:16px;height:16px;stroke:var(--ink2);fill:none;stroke-width:1.5;}
+.upload-zone.has-file .upload-icon{border-color:var(--teal);background:white;}
+.upload-zone.has-file .upload-icon svg{stroke:var(--teal);}
+.upload-zone p{font-size:14px;color:var(--ink);font-weight:500;margin-bottom:3px;}
+.upload-zone small{font-size:12px;color:var(--ink3);font-family:var(--mono);}
+.upload-zone.has-file p,.upload-zone.has-file small{color:var(--teal-text);}
+.upload-optional{font-size:10px;font-family:var(--mono);color:var(--ink3);text-align:center;margin-top:4px;letter-spacing:0.04em;}
+
+.tcg-toggle-row{display:flex;align-items:center;gap:12px;margin-top:0.85rem;padding-top:0.85rem;border-top:1px solid var(--border);}
+.tcg-toggle-label{font-size:13px;color:var(--ink);font-weight:500;}
+.tcg-toggle-desc{font-size:11px;color:var(--ink3);font-family:var(--mono);}
+.toggle{position:relative;display:inline-block;width:38px;height:20px;flex-shrink:0;}
+.toggle input{opacity:0;width:0;height:0;}
+.slider-t{position:absolute;cursor:pointer;inset:0;background:var(--surface3);border-radius:20px;border:1px solid var(--border2);transition:0.18s;}
+.slider-t:before{position:absolute;content:"";height:14px;width:14px;left:2px;bottom:2px;background:var(--ink3);border-radius:50%;transition:0.18s;}
+input:checked+.slider-t{background:var(--ink);border-color:var(--ink);}
+input:checked+.slider-t:before{background:var(--surface);transform:translateX(18px);}
+.tcg-section{display:none;margin-top:0.85rem;padding-top:0.85rem;border-top:1px solid var(--border);}
+.tcg-section.visible{display:block;}
+.tcg-inner{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:0.75rem;}
+.threshold-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.threshold-row label{font-size:12px;color:var(--ink2);font-family:var(--mono);}
+.threshold-input{background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius);padding:5px 10px;font-family:var(--mono);font-size:13px;color:var(--ink);outline:none;width:80px;}
+.threshold-input:focus{border-color:var(--ink);}
+
+.split-banner{display:none;gap:10px;margin-bottom:1rem;}
+.split-box{flex:1;border-radius:var(--radius-lg);padding:0.85rem 1rem;border:1px solid;}
+.split-box .sb-n{font-family:var(--mono);font-size:24px;font-weight:500;line-height:1;}
+.split-box .sb-l{font-size:11px;font-family:var(--mono);margin-top:3px;}
+.split-box.singles{background:var(--teal-bg);border-color:#9fd4cc;color:var(--teal-text);}
+.split-box.lots-box{background:var(--amber-bg);border-color:#e8c88a;color:var(--amber-text);}
+
+.stats-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:1.25rem;}
+.stat-box{background:var(--surface2);border-radius:var(--radius);padding:0.75rem 1rem;border:1px solid var(--border);}
+.stat-box .n{font-family:var(--mono);font-size:20px;font-weight:500;color:var(--ink);line-height:1;}
+.stat-box .l{font-size:10px;color:var(--ink3);margin-top:4px;letter-spacing:0.04em;text-transform:uppercase;font-family:var(--mono);}
+
+.scroll-table{border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;}
+.scroll-body{max-height:220px;overflow-y:auto;}
+.trow{display:grid;grid-template-columns:38px 1fr 90px 50px 50px 56px 60px;font-size:12px;border-bottom:1px solid var(--border);}
+.trow.no-route{grid-template-columns:38px 1fr 90px 50px 50px 56px;}
+.trow:last-child{border-bottom:none;}
+.trow.thead{background:var(--surface2);position:sticky;top:0;font-family:var(--mono);font-size:11px;color:var(--ink3);letter-spacing:0.04em;}
+.trow>span{padding:6px 8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+
+.badge{display:inline-block;font-family:var(--mono);font-size:9px;font-weight:500;padding:1px 5px;border-radius:2px;vertical-align:middle;}
+.b-r{background:#fcebeb;color:#791f1f;}.b-u{background:#eeecf8;color:#3d3589;}.b-c{background:var(--surface3);color:var(--ink2);}.b-m{background:#faeeda;color:#633806;}
+.b-single{background:var(--teal-bg);color:var(--teal-text);}
+.b-lot{background:var(--amber-bg);color:var(--amber-text);}
+.set-pill{display:inline-block;font-family:var(--mono);font-size:10px;padding:1px 6px;border-radius:2px;background:var(--surface3);color:var(--ink2);border:1px solid var(--border);}
+
+.singles-panel{display:none;background:var(--teal-bg);border:1px solid #9fd4cc;border-radius:var(--radius-lg);padding:1.25rem 1.5rem;margin-bottom:1rem;}
+.singles-panel .step-label{color:var(--teal-text);}
+.singles-table{border:1px solid #9fd4cc;border-radius:var(--radius-lg);overflow:hidden;margin-bottom:1rem;}
+.singles-body{max-height:200px;overflow-y:auto;}
+.srow{display:grid;grid-template-columns:38px 1fr 90px 50px 60px 56px;font-size:12px;border-bottom:1px solid #c8e8e4;}
+.srow:last-child{border-bottom:none;}
+.srow.thead{background:rgba(45,125,111,0.1);font-family:var(--mono);font-size:11px;color:var(--teal-text);letter-spacing:0.04em;position:sticky;top:0;}
+.srow>span{padding:6px 8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+
+.config-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;}
+.config-section{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1rem;}
+.config-section-title{font-size:11px;font-weight:500;letter-spacing:0.06em;color:var(--ink2);text-transform:uppercase;margin-bottom:0.75rem;font-family:var(--mono);}
+.rar-row{display:grid;grid-template-columns:1fr 72px;gap:8px;align-items:center;margin-bottom:8px;}
+.rar-row:last-child{margin-bottom:0;}
+.rar-label{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--ink);}
+.rar-input{background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius);padding:5px 8px;font-family:var(--mono);font-size:12px;color:var(--ink);outline:none;width:100%;text-align:center;}
+.rar-input:focus{border-color:var(--ink);}
+.rar-divider{border:none;border-top:1px solid var(--border);margin:10px 0;}
+.fill-row{display:grid;grid-template-columns:1fr 72px;gap:8px;align-items:center;}
+.val-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+.val-row:last-child{margin-bottom:0;}
+.val-row label{font-size:12px;color:var(--ink2);font-family:var(--mono);width:50px;flex-shrink:0;}
+.val-input{background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius);padding:5px 8px;font-family:var(--mono);font-size:12px;color:var(--ink);outline:none;width:80px;}
+.val-input:focus{border-color:var(--ink);}
+
+.dup-row{display:flex;align-items:center;gap:12px;margin-bottom:1rem;padding:0.85rem 1rem;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-lg);}
+.dup-label{font-size:13px;color:var(--ink);flex:1;}
+.dup-label span{font-size:11px;color:var(--ink3);font-family:var(--mono);display:block;margin-top:2px;}
+.dup-btns{display:flex;gap:4px;}
+.dup-btn{width:36px;height:36px;border-radius:var(--radius);border:1px solid var(--border2);background:transparent;cursor:pointer;font-family:var(--mono);font-size:14px;font-weight:500;color:var(--ink2);transition:all 0.12s;display:flex;align-items:center;justify-content:center;}
+.dup-btn:hover{background:var(--surface3);}
+.dup-btn.active{background:var(--ink);color:var(--surface);border-color:var(--ink);}
+.dup-btn.unlimited{font-size:12px;width:52px;}
+
+.controls-row{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:0.75rem;}
+.cg{display:flex;flex-direction:column;gap:5px;}
+.cg label{font-size:11px;color:var(--ink3);font-family:var(--mono);letter-spacing:0.04em;}
+.cg input{width:90px;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius);padding:7px 10px;font-family:var(--mono);font-size:13px;color:var(--ink);outline:none;}
+.cg input:focus{border-color:var(--ink);}
+.btn{padding:8px 18px;border-radius:var(--radius);border:1px solid var(--border2);background:transparent;color:var(--ink);font-size:13px;cursor:pointer;font-family:var(--display);font-weight:500;transition:background 0.12s;}
+.btn:hover{background:var(--surface2);}
+.btn-primary{background:var(--ink);color:var(--surface);border-color:var(--ink);}
+.btn-primary:hover{background:#2e2b27;}
+.btn-sm{padding:5px 12px;font-size:12px;}
+.btn-teal{background:var(--teal);color:white;border-color:var(--teal);}
+.btn-teal:hover{background:#245f54;}
+
+.tab-bar{display:flex;border-bottom:1px solid var(--border);margin-bottom:1.25rem;}
+.tab{padding:9px 18px;font-size:12px;font-family:var(--mono);cursor:pointer;color:var(--ink3);border-bottom:2px solid transparent;margin-bottom:-1px;letter-spacing:0.04em;transition:color 0.12s;}
+.tab.active{color:var(--ink);border-bottom-color:var(--ink);}
+.tab-panel{display:none;}
+.tab-panel.active{display:block;}
+
+.prog-wrap{height:3px;background:var(--surface3);border-radius:2px;margin-bottom:0.6rem;overflow:hidden;}
+.prog-fill{height:100%;background:var(--teal);border-radius:2px;transition:width 0.25s;}
+.prog-label{font-size:11px;font-family:var(--mono);color:var(--ink3);margin-bottom:0.5rem;}
+.info-row{display:flex;align-items:center;gap:6px;font-size:11px;font-family:var(--mono);color:var(--ink3);margin-bottom:0.85rem;}
+.info-dot{width:6px;height:6px;border-radius:50%;background:var(--teal);flex-shrink:0;}
+.action-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:1rem;}
+.done-bar{text-align:center;padding:1rem;background:var(--teal-bg);border:1px solid #b0d9d3;border-radius:var(--radius);color:var(--teal-text);font-size:13px;font-weight:500;display:none;margin-bottom:0.75rem;}
+
+.pull-wrap{border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;}
+.pull-scroll{max-height:600px;overflow-y:auto;}
+.pull-head-row{display:grid;grid-template-columns:44px 1fr 110px;background:var(--surface2);font-family:var(--mono);font-size:11px;color:var(--ink3);letter-spacing:0.04em;position:sticky;top:0;border-bottom:1px solid var(--border);}
+.pull-head-row>span{padding:8px 12px;}
+.pull-card-row{display:grid;grid-template-columns:44px 1fr 110px;border-bottom:1px solid var(--border);border-left:3px solid transparent;transition:background 0.1s;cursor:pointer;min-height:56px;align-items:center;}
+.pull-card-row:last-child{border-bottom:none;}
+.pull-card-row:hover{background:var(--surface2);}
+.pull-card-row.done .pull-name{text-decoration:line-through;opacity:0.5;}
+.pull-card-row.done .pull-scan,.pull-card-row.done .pull-set{opacity:0.4;}
+.pull-card-row.done .pull-rar-cell{opacity:0.4;}
+.pull-card-row>div{padding:10px 12px;}
+.pull-check-cell{display:flex;align-items:center;justify-content:center;padding:10px 8px !important;}
+.check-btn{width:22px;height:22px;border-radius:var(--radius);border:1.5px solid var(--border2);background:transparent;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.12s;}
+.check-btn.checked{background:var(--teal);border-color:var(--teal);}
+.check-btn.checked::after{content:'';display:block;width:5px;height:9px;border:2px solid #fff;border-top:none;border-left:none;transform:rotate(45deg) translateY(-1px);}
+.pull-main-cell{display:flex;flex-direction:column;gap:3px;min-width:0;}
+.pull-name-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.pull-name{font-size:14px;color:var(--ink);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:1;min-width:0;}
+.lot-pill{display:inline-flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:11px;font-weight:500;padding:2px 9px;border-radius:20px;white-space:nowrap;flex-shrink:0;}
+.pull-meta-row{display:flex;align-items:center;gap:8px;}
+.pull-scan{font-family:var(--mono);font-size:11px;color:var(--ink3);}
+.pull-set{font-family:var(--mono);font-size:11px;color:var(--ink3);}
+.pull-rar-cell{display:flex;align-items:center;justify-content:flex-end;}
+
+.color-bar{height:3px;width:100%;}
+.lots-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px;}
+.lot-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;}
+.lot-head{padding:0.85rem 1rem 0.75rem;border-bottom:1px solid var(--border);background:var(--surface2);}
+.lot-num-lbl{font-size:11px;font-family:var(--mono);color:var(--ink3);margin-bottom:4px;letter-spacing:0.06em;}
+.lot-title-row{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;}
+.lot-count{font-size:18px;font-weight:700;color:var(--ink);}
+.lot-val{font-family:var(--mono);font-size:13px;font-weight:500;color:var(--ink2);}
+.lot-rarity-bar{display:flex;gap:4px;margin-top:6px;flex-wrap:wrap;}
+.lot-items{max-height:340px;overflow-y:auto;}
+.lot-item{display:flex;align-items:center;gap:6px;padding:5px 10px;border-bottom:1px solid var(--border);font-size:12px;}
+.lot-item:last-child{border-bottom:none;}
+.lot-idx{font-family:var(--mono);font-size:10px;color:var(--ink3);background:var(--surface2);border-radius:2px;padding:1px 5px;flex-shrink:0;min-width:26px;text-align:center;}
+.lot-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink);}
+.lot-meta{font-family:var(--mono);font-size:10px;color:var(--ink3);flex-shrink:0;}
+.value-bar{height:4px;border-radius:2px;margin-top:6px;background:var(--surface3);overflow:hidden;}
+.value-fill{height:100%;border-radius:2px;}
+
+.err-bar{font-size:12px;font-family:var(--mono);color:#7a2a2a;padding:8px 12px;background:#fdf0f0;border:1px solid #e8c4c4;border-radius:var(--radius);margin-bottom:0.75rem;display:none;}
+.skip-bar{font-size:12px;font-family:var(--mono);color:var(--ink3);padding:6px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:0.75rem;display:none;}
+.file-lbl{font-size:11px;font-family:var(--mono);color:var(--ink3);margin-top:0.5rem;}
+.cfg-note{font-size:11px;font-family:var(--mono);color:var(--ink3);margin-top:0.5rem;}
+.sf-bar{display:none;align-items:center;gap:8px;font-size:11px;font-family:var(--mono);color:var(--ink3);padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:0.75rem;}
+.sf-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+.dot-spin{background:var(--accent);animation:pulse 1s infinite;}
+.dot-ok{background:var(--teal);}
+.dot-err{background:#c04040;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.3;}}
+
+.set-filter{margin-bottom:1.1rem;display:none;}
+.sf-lbl{font-size:11px;font-family:var(--mono);color:var(--ink3);letter-spacing:0.04em;margin-bottom:0.5rem;display:flex;justify-content:space-between;}
+.set-chips{display:flex;flex-wrap:wrap;gap:6px;max-height:110px;overflow-y:auto;padding:2px 0;}
+.set-chip{display:inline-flex;align-items:center;gap:5px;font-family:var(--mono);font-size:11px;padding:4px 10px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--surface2);cursor:pointer;transition:all 0.12s;user-select:none;color:var(--ink2);}
+.set-chip.excluded{background:var(--surface3);color:var(--ink3);border-color:var(--border);text-decoration:line-through;opacity:0.55;}
+.set-chip.included{background:var(--teal-bg);color:var(--teal-text);border-color:#9fd4cc;}
+.filter-acts{display:flex;gap:6px;margin-top:0.5rem;}
+
+.warn{color:var(--amber-text);background:var(--amber-bg);border:1px solid #e8c88a;border-radius:var(--radius);padding:6px 12px;font-size:11px;font-family:var(--mono);margin-top:0.5rem;display:none;}
+.total-row{display:flex;justify-content:space-between;align-items:center;padding-top:8px;border-top:1px solid var(--border);margin-top:4px;}
+.est-preview{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:0.85rem 1rem;margin-bottom:1rem;display:none;}
+.est-row{display:flex;justify-content:space-between;align-items:center;font-size:12px;padding:3px 0;}
+.est-label{color:var(--ink3);font-family:var(--mono);}
+.est-val{font-family:var(--mono);font-weight:500;color:var(--ink);}
+.est-divider{border:none;border-top:1px solid var(--border);margin:6px 0;}
+
+.site-footer{text-align:center;font-size:11px;font-family:var(--mono);color:var(--ink3);margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--border);}
+</style>
+</head>
+<body>
+<div class="app">
+
+<header class="site-header">
+  <div class="wordmark">
+    <span class="wordmark-title">Lot Builder</span>
+    <span class="wordmark-sub">TCGplayer · Scan &amp; Identify</span>
+  </div>
+  <span class="site-version">v1.0</span>
+</header>
+
+<div class="panel" id="s-upload">
+  <div class="step-label">01 — Import</div>
+  <div class="upload-zone" id="dz-scan" onclick="document.getElementById('fi-scan').click()">
+    <div class="upload-icon"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 12 15 15"/></svg></div>
+    <p>Scan &amp; Identify CSV</p>
+    <small>Drop here or click to browse · tab or comma separated</small>
+  </div>
+  <div id="lbl-scan" class="file-lbl"></div>
+  <input type="file" id="fi-scan" accept=".csv,.tsv,.txt" style="display:none">
+  <input type="file" id="fi-inv" accept=".csv" style="display:none">
+  <div id="err-bar" class="err-bar"></div>
+  <div class="tcg-toggle-row">
+    <label class="toggle"><input type="checkbox" id="tcg-toggle"><span class="slider-t"></span></label>
+    <span class="tcg-toggle-label">Pull singles for TCGplayer store</span>
+    <span class="tcg-toggle-desc">cards above a price threshold not already in your inventory</span>
+  </div>
+  <div class="tcg-section" id="tcg-section">
+    <div class="tcg-inner">
+      <div>
+        <div class="upload-zone" id="dz-inv" onclick="document.getElementById('fi-inv').click()">
+          <div class="upload-icon"><svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg></div>
+          <p>TCGplayer Inventory CSV</p>
+          <small>Seller Portal → Pricing tab → Export from Live</small>
+        </div>
+        <div class="upload-optional">optional — cross-reference existing stock</div>
+        <div id="lbl-inv" class="file-lbl" style="text-align:center"></div>
+      </div>
+      <div style="display:flex;flex-direction:column;justify-content:center;gap:12px;">
+        <div class="threshold-row">
+          <label>Pull if price ≥ $</label>
+          <input class="threshold-input" type="number" id="threshold" value="0.05" min="0" step="0.01" oninput="reTag()">
+        </div>
+        <div style="font-size:11px;font-family:var(--mono);color:var(--ink3);line-height:1.6;">Cards at or above this price not in your store get pulled as singles before lot building.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="s-cards" style="display:none">
+  <div class="step-label">02 — Cards</div>
+  <div id="sf-bar" class="sf-bar"><span class="sf-dot" id="sf-dot"></span><span id="sf-msg"></span></div>
+  <div id="split-banner" class="split-banner">
+    <div class="split-box singles"><div class="sb-n" id="sb-singles">0</div><div class="sb-l">Pull to list individually</div></div>
+    <div class="split-box lots-box"><div class="sb-n" id="sb-lots">0</div><div class="sb-l">Going to lots</div></div>
+  </div>
+  <div class="stats-grid" id="stats-grid"></div>
+  <div class="scroll-table">
+    <div class="trow thead" id="card-thead"><span>#</span><span>Name</span><span>Set</span><span>Code</span><span>Rar</span><span>Price</span><span>Route</span></div>
+    <div class="scroll-body" id="card-rows"></div>
+  </div>
+</div>
+
+<div id="s-singles" class="singles-panel">
+  <div class="step-label">02b — Singles to list individually</div>
+  <div style="font-size:12px;color:var(--teal-text);font-family:var(--mono);margin-bottom:0.75rem;" id="singles-desc"></div>
+  <div class="singles-table">
+    <div class="srow thead"><span>#</span><span>Name</span><span>Set</span><span>Code</span><span>Condition</span><span>Price</span></div>
+    <div class="singles-body" id="singles-rows"></div>
+  </div>
+  <div class="action-row" style="margin-top:0.75rem;margin-bottom:0;">
+    <button class="btn btn-teal btn-sm" onclick="expSingles()">Export for TCGplayer import</button>
+    <button class="btn btn-sm" style="border-color:#9fd4cc;color:var(--teal-text)" onclick="expSinglesPull()">Export singles pull sheet</button>
+  </div>
+</div>
+
+<div class="panel" id="s-config" style="display:none">
+  <div class="step-label">03 — Configure lots</div>
+  <div class="set-filter" id="set-filter">
+    <div class="sf-lbl"><span>Set filter</span><span id="filter-sum" style="color:var(--teal-text)"></span></div>
+    <div class="set-chips" id="set-chips"></div>
+    <div class="filter-acts">
+      <button class="btn btn-sm" onclick="selAll()">Include all</button>
+      <button class="btn btn-sm" onclick="exclAll()">Exclude all</button>
+    </div>
+  </div>
+  <div class="dup-row">
+    <div class="dup-label">
+      Max copies of same card per lot
+      <span id="dup-desc">No duplicates allowed</span>
+    </div>
+    <div class="dup-btns">
+      <button class="dup-btn active" id="dup-1" onclick="setDup(1)">1</button>
+      <button class="dup-btn" id="dup-2" onclick="setDup(2)">2</button>
+      <button class="dup-btn" id="dup-3" onclick="setDup(3)">3</button>
+      <button class="dup-btn" id="dup-4" onclick="setDup(4)">4</button>
+      <button class="dup-btn unlimited" id="dup-0" onclick="setDup(0)">Any</button>
+    </div>
+  </div>
+  <div class="config-grid">
+    <div class="config-section">
+      <div class="config-section-title">Rarity targets per lot</div>
+      <div class="rar-row"><div class="rar-label"><span class="badge b-m">M</span> Mythic</div><input class="rar-input" type="number" id="r-m" value="0" min="0" step="1" oninput="updateNote()"></div>
+      <div class="rar-row"><div class="rar-label"><span class="badge b-r">R</span> Rare</div><input class="rar-input" type="number" id="r-r" value="1" min="0" step="1" oninput="updateNote()"></div>
+      <div class="rar-row"><div class="rar-label"><span class="badge b-u">U</span> Uncommon</div><input class="rar-input" type="number" id="r-u" value="3" min="0" step="1" oninput="updateNote()"></div>
+      <div class="rar-row"><div class="rar-label"><span class="badge b-c">C</span> Common</div><input class="rar-input" type="number" id="r-c" value="6" min="0" step="1" oninput="updateNote()"></div>
+      <hr class="rar-divider">
+      <div class="fill-row"><div class="rar-label" style="font-size:12px;color:var(--ink2);"><span style="font-family:var(--mono);font-size:10px;background:var(--surface3);border:1px solid var(--border2);padding:1px 5px;border-radius:2px;">+</span> Fill (any rarity)</div><input class="rar-input" type="number" id="r-fill" value="40" min="0" step="1" oninput="updateNote()"></div>
+      <div class="total-row"><span style="font-size:11px;font-family:var(--mono);color:var(--ink3);">Total per lot</span><span style="font-size:13px;font-family:var(--mono);font-weight:500;color:var(--ink);" id="rar-total">50</span></div>
+    </div>
+    <div class="config-section">
+      <div class="config-section-title">Value targets per lot</div>
+      <div class="val-row"><label>Min $</label><input class="val-input" type="number" id="v-min" value="0.00" min="0" step="0.05" oninput="updateNote()"></div>
+      <div class="val-row"><label>Max $</label><input class="val-input" type="number" id="v-max" value="0.00" min="0" step="0.05" oninput="updateNote()"></div>
+      <div style="font-size:10px;font-family:var(--mono);color:var(--ink3);margin-top:8px;line-height:1.6;">Set both to 0.00 to skip value filtering. Lots outside range are flagged after building.</div>
+    </div>
+  </div>
+  <div id="warn-box" class="warn"></div>
+  <div class="est-preview" id="est-preview">
+    <div class="est-row"><span class="est-label">Cards in lot pool</span><span class="est-val" id="est-pool">—</span></div>
+    <div class="est-row"><span class="est-label">Total lot pool value</span><span class="est-val" id="est-total">—</span></div>
+    <hr class="est-divider">
+    <div class="est-row"><span class="est-label">Cards per lot</span><span class="est-val" id="est-cpl">—</span></div>
+    <div class="est-row"><span class="est-label">Est. value per lot</span><span class="est-val" id="est-vpl">—</span></div>
+    <div class="est-row"><span class="est-label">Max lots possible</span><span class="est-val" id="est-maxlots">—</span></div>
+  </div>
+  <div class="controls-row">
+    <div class="cg"><label>Lot count</label><input type="number" id="nl" value="5" min="1" step="1" oninput="updateNote()"></div>
+    <button class="btn btn-primary" onclick="build()">Generate lots</button>
+    <button class="btn" onclick="clearAll()">Clear</button>
+  </div>
+  <div id="cfg-note" class="cfg-note"></div>
+</div>
+
+<div class="panel" id="s-lots" style="display:none">
+  <div class="step-label">04 — Pull &amp; Review</div>
+  <div id="skip-bar" class="skip-bar"></div>
+  <div class="tab-bar">
+    <div class="tab active" onclick="doTab('pull')">Pull sheet</div>
+    <div class="tab" onclick="doTab('lots')">Lot breakdown</div>
+  </div>
+  <div id="tp-pull" class="tab-panel active">
+    <div class="info-row"><span class="info-dot"></span>Flip through your stack — tap each card as you pull it into its lot</div>
+    <div class="action-row">
+      <button class="btn btn-sm" onclick="expPull()">Export pull sheet</button>
+      <button class="btn btn-sm" onclick="resetChecks()">Reset progress</button>
+    </div>
+    <div class="prog-label" id="prog-lbl">0 of 0 pulled</div>
+    <div class="prog-wrap"><div class="prog-fill" id="prog-fill" style="width:0%"></div></div>
+    <div class="done-bar" id="done-bar">All cards pulled — ready to list!</div>
+    <div class="pull-wrap">
+      <div class="pull-head-row"><span></span><span>Card · Lot</span><span style="text-align:right">Rarity</span></div>
+      <div class="pull-scroll" id="pull-body"></div>
+    </div>
+  </div>
+  <div id="tp-lots" class="tab-panel">
+    <div class="action-row">
+      <button class="btn btn-sm" onclick="expLots()">Export lots CSV</button>
+      <button class="btn btn-sm" onclick="copySum()">Copy summary</button>
+    </div>
+    <div class="lots-grid" id="lots-grid"></div>
+  </div>
+</div>
+
+<footer class="site-footer">
+  Lot Builder · Scryfall enrichment via api.scryfall.com · All processing happens in your browser
+</footer>
+
+</div>
+
+<script>
+const LC=[
+  {bg:'#EEEDFE',tx:'#3C3489'},{bg:'#E1F5EE',tx:'#085041'},{bg:'#FAECE7',tx:'#712B13'},
+  {bg:'#E6F1FB',tx:'#0C447C'},{bg:'#FAEEDA',tx:'#633806'},{bg:'#FBEAF0',tx:'#72243E'},
+  {bg:'#EAF3DE',tx:'#27500A'},{bg:'#F1EFE8',tx:'#444441'},{bg:'#FCEBEB',tx:'#791F1F'}
+];
+function lc(i){return LC[i%LC.length];}
+
+let cards=[],lots=[],pullRows=[],excl=new Set(),invSet=new Set(),hasInv=false,maxDup=1;
+
+function setDup(n){
+  maxDup=n;
+  [0,1,2,3,4].forEach(v=>{const el=document.getElementById('dup-'+v);if(el)el.classList.toggle('active',v===n);});
+  const desc=document.getElementById('dup-desc');
+  if(n===0)desc.textContent='Unlimited — any number of copies per lot';
+  else if(n===1)desc.textContent='No duplicates — max 1 copy per lot';
+  else desc.textContent='Max '+n+' copies of the same card per lot';
+  updateNote();
+}
+
+const tcgToggle=document.getElementById('tcg-toggle');
+const tcgSection=document.getElementById('tcg-section');
+tcgToggle.addEventListener('change',()=>{
+  tcgSection.classList.toggle('visible',tcgToggle.checked);
+  if(!tcgToggle.checked){invSet=new Set();hasInv=false;document.getElementById('dz-inv').className='upload-zone';document.getElementById('lbl-inv').textContent='';document.getElementById('fi-inv').value='';}
+  if(cards.length)reTag();
+});
+
+function showErr(m){const el=document.getElementById('err-bar');el.textContent=m;el.style.display=m?'block':'none';}
+function sfBar(st,m){
+  const b=document.getElementById('sf-bar'),d=document.getElementById('sf-dot'),t=document.getElementById('sf-msg');
+  b.style.display='flex';d.className='sf-dot '+(st==='load'?'dot-spin':st==='ok'?'dot-ok':'dot-err');t.textContent=m;
+  if(st==='ok')setTimeout(()=>{b.style.display='none';},4000);
+}
+function parseLine(line,sep){
+  if(sep==='\t')return line.split('\t').map(v=>v.replace(/^"|"$/g,'').trim());
+  const r=[];let c='',q=false;
+  for(let i=0;i<line.length;i++){if(line[i]==='"'){q=!q;}else if(line[i]===','&&!q){r.push(c);c='';}else{c+=line[i];}}
+  r.push(c);return r.map(v=>v.trim());
+}
+function invKey(n,s){return(n||'').toLowerCase().trim()+'||'+(s||'').toLowerCase().trim();}
+function invKeyName(n){return(n||'').toLowerCase().trim();}
+
+document.getElementById('fi-inv').addEventListener('change',e=>{
+  if(!e.target.files[0])return;
+  const rd=new FileReader();
+  rd.onload=ev=>{
+    const lines=ev.target.result.trim().split('\n').filter(l=>l.trim());
+    if(lines.length<2)return;
+    const sep=lines[0].includes('\t')?'\t':',';
+    const hdrs=parseLine(lines[0],sep).map(h=>h.toLowerCase());
+    const ni=hdrs.findIndex(h=>h.includes('product name')||h==='name');
+    const si=hdrs.findIndex(h=>h.includes('set name')||h==='set');
+    if(ni===-1)return;
+    invSet=new Set();
+    for(let i=1;i<lines.length;i++){
+      const c=parseLine(lines[i],sep);if(!c[ni])continue;
+      const name=c[ni].replace(/"/g,'').trim(),set=si>=0?c[si].replace(/"/g,'').trim():'';
+      invSet.add(invKey(name,set));invSet.add(invKeyName(name));
+    }
+    hasInv=true;
+    document.getElementById('dz-inv').className='upload-zone has-file';
+    document.getElementById('lbl-inv').textContent=e.target.files[0].name+' · '+(invSet.size/2|0)+' items';
+    if(cards.length)reTag();
+  };
+  rd.readAsText(e.target.files[0]);
+});
+document.getElementById('dz-inv').addEventListener('dragover',e=>e.preventDefault());
+document.getElementById('dz-inv').addEventListener('drop',e=>{
+  e.preventDefault();const f=e.dataTransfer.files[0];if(!f)return;
+  const dt=new DataTransfer();dt.items.add(f);document.getElementById('fi-inv').files=dt.files;
+  document.getElementById('fi-inv').dispatchEvent(new Event('change'));
+});
+
+const dzScan=document.getElementById('dz-scan'),fiScan=document.getElementById('fi-scan');
+dzScan.addEventListener('dragover',e=>{e.preventDefault();dzScan.style.background='var(--surface2)';dzScan.style.borderColor='var(--accent)';});
+dzScan.addEventListener('dragleave',()=>{dzScan.style.background='';dzScan.style.borderColor='';});
+dzScan.addEventListener('drop',e=>{e.preventDefault();dzScan.style.background='';dzScan.style.borderColor='';if(e.dataTransfer.files[0])goScan(e.dataTransfer.files[0]);});
+fiScan.addEventListener('change',e=>{if(e.target.files[0])goScan(e.target.files[0]);});
+
+function goScan(file){
+  showErr('');document.getElementById('lbl-scan').textContent='Loading…';
+  const rd=new FileReader();
+  rd.onload=async e=>{
+    const lines=e.target.result.trim().split('\n').filter(l=>l.trim());
+    if(lines.length<2){showErr('File empty.');return;}
+    const sep=lines[0].includes('\t')?'\t':',';
+    const hdrs=parseLine(lines[0],sep).map(h=>h.toLowerCase());
+    const col=(...ns)=>{for(const n of ns){const i=hdrs.findIndex(h=>h===n||h.includes(n));if(i>=0)return i;}return -1;};
+    const ni=col('card name','name','product name'),cni=col('card #','card#','collector number','number','card number'),pi=col('listing price','tcg market price','price','market price'),qi=col('qty','quantity','count'),condi=col('condition','cond'),printi=col('printing','print','foil'),rari=col('rarity','rar'),seqi=col('import sequence','import sequence id','sequence');
+    if(ni===-1){showErr('No name column. Headers: '+hdrs.join(', '));return;}
+    cards=[];
+    for(let i=1;i<lines.length;i++){
+      const c=parseLine(lines[i],sep);if(!c[ni]||!c[ni].trim())continue;
+      const name=c[ni].trim(),cardNum=cni>=0?c[cni].trim():'',price=pi>=0?parseFloat(c[pi])||0:0,qty=qi>=0?Math.max(1,parseInt(c[qi])||1):1,condition=condi>=0?c[condi].trim():'',printing=printi>=0?c[printi].trim():'',rawRarity=rari>=0?c[rari].trim():'',seq=seqi>=0?parseInt(c[seqi])||i:i;
+      for(let q=0;q<qty;q++)cards.push({name,cardNum,price,condition,printing,rarity:rawRarity,seq,scanIdx:cards.length+1,setName:'',setCode:'',matchTier:0,tcgId:null,route:'lot',inInv:false});
+    }
+    cards.sort((a,b)=>a.seq-b.seq);cards.forEach((c,i)=>c.scanIdx=i+1);
+    if(!cards.length){showErr('No valid rows.');return;}
+    dzScan.className='upload-zone has-file';
+    document.getElementById('lbl-scan').textContent=file.name+' · '+cards.length+' cards';
+    document.getElementById('s-cards').style.display='block';
+    document.getElementById('s-config').style.display='block';
+    tagCards();renderCards();renderSingles();updateNote();
+    await enrich();
+  };
+  rd.readAsText(file);
+}
+
+function tagCards(){
+  const useTCG=tcgToggle.checked,thresh=parseFloat(document.getElementById('threshold').value)||0.05;
+  cards=cards.map(c=>{
+    const inInv=useTCG&&hasInv&&(invSet.has(invKey(c.name,c.setName))||invSet.has(invKeyName(c.name)));
+    return{...c,route:(useTCG&&c.price>=thresh&&!inInv)?'single':'lot',inInv};
+  });
+}
+function reTag(){if(cards.length){tagCards();renderCards();renderSingles();buildSetFilter();updateNote();}}
+
+async function enrich(){
+  const delay=ms=>new Promise(r=>setTimeout(r,ms));
+  sfBar('load','Scryfall: preparing lookups…');
+  const BATCH=75,pairs=[...new Map(cards.map(c=>[c.name+'|'+c.cardNum,{name:c.name,collector_number:c.cardNum}])).values()].filter(p=>p.collector_number),nameOnly=[...new Set(cards.filter(c=>!c.cardNum).map(c=>c.name))],rm={};
+  for(let i=0;i<pairs.length;i+=BATCH){
+    const batch=pairs.slice(i,i+BATCH);
+    try{
+      const resp=await fetch('https://api.scryfall.com/cards/collection',{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify({identifiers:batch})});
+      if(resp.ok){const d=await resp.json();(d.data||[]).forEach(card=>{const sf={setName:card.set_name||'',setCode:(card.set||'').toUpperCase(),tier:1,tcgId:card.tcgplayer_id||null};rm[card.name+'|'+card.collector_number]=sf;rm[card.name.toLowerCase()+'|'+card.collector_number]=sf;});(d.not_found||[]).forEach(id=>{if(id.name)nameOnly.push(id.name);});}
+    }catch{}
+    sfBar('load','Scryfall: exact '+(Math.min(i+BATCH,pairs.length))+'/'+pairs.length+'…');
+    if(i+BATCH<pairs.length)await delay(100);
+  }
+  const still=[...new Set(nameOnly)];
+  for(let i=0;i<still.length;i+=BATCH){
+    const batch=still.slice(i,i+BATCH);
+    try{
+      const resp=await fetch('https://api.scryfall.com/cards/collection',{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify({identifiers:batch.map(n=>({name:n}))})});
+      if(resp.ok){const d=await resp.json();(d.data||[]).forEach(card=>{const sf={setName:card.set_name||'',setCode:(card.set||'').toUpperCase(),tier:2,tcgId:card.tcgplayer_id||null};rm[card.name+'|']=sf;rm[card.name.toLowerCase()+'|']=sf;});}
+    }catch{}
+    if(i+BATCH<still.length)await delay(100);
+  }
+  cards=cards.map(c=>{const sf=rm[c.name+'|'+c.cardNum]||rm[c.name.toLowerCase()+'|'+c.cardNum]||rm[c.name+'|']||rm[c.name.toLowerCase()+'|']||null;return sf?{...c,setName:sf.setName,setCode:sf.setCode,matchTier:sf.tier,tcgId:sf.tcgId}:c;});
+  tagCards();
+  const t1=cards.filter(c=>c.matchTier===1).length,t2=cards.filter(c=>c.matchTier===2).length,un=cards.filter(c=>c.matchTier===0).length;
+  sfBar('ok','Matched '+(t1+t2)+'/'+cards.length+' — exact: '+t1+', name: '+t2+(un?', unmatched: '+un:''));
+  renderCards();renderSingles();buildSetFilter();updateNote();
+}
+
+function rarKey(r){const l=(r||'').toLowerCase();if(l.includes('mythic'))return 'm';if(l.includes('rare'))return 'r';if(l.includes('uncommon'))return 'u';return 'c';}
+function rarBadge(r){const k=rarKey(r);const cls={m:'b-m',r:'b-r',u:'b-u',c:'b-c'}[k];return'<span class="badge '+cls+'">'+k.toUpperCase()+'</span>';}
+function rarBadgeMd(r){const k=rarKey(r);const lbl={m:'Mythic',r:'Rare',u:'Uncommon',c:'Common'}[k];return'<span class="badge '+{m:'b-m',r:'b-r',u:'b-u',c:'b-c'}[k]+'" style="font-size:10px;padding:2px 7px">'+lbl+'</span>';}
+
+function renderCards(){
+  const useTCG=tcgToggle.checked;
+  const singles=cards.filter(c=>c.route==='single'),lotPool=cards.filter(c=>c.route==='lot');
+  document.getElementById('sb-singles').textContent=singles.length;
+  document.getElementById('sb-lots').textContent=lotPool.length;
+  document.getElementById('split-banner').style.display=(useTCG&&singles.length>0)?'flex':'none';
+  const u=[...new Set(cards.map(c=>c.name))],tv=cards.reduce((s,c)=>s+c.price,0),sets=[...new Set(cards.map(c=>c.setCode).filter(Boolean))].length,rares=cards.filter(c=>['m','r'].includes(rarKey(c.rarity))).length;
+  document.getElementById('stats-grid').innerHTML='<div class="stat-box"><div class="n">'+cards.length+'</div><div class="l">Total</div></div><div class="stat-box"><div class="n">'+u.length+'</div><div class="l">Unique</div></div><div class="stat-box"><div class="n">'+(sets||'…')+'</div><div class="l">Sets</div></div><div class="stat-box"><div class="n">'+rares+'</div><div class="l">Rares+</div></div><div class="stat-box"><div class="n">$'+tv.toFixed(2)+'</div><div class="l">Value</div></div>';
+  const showRoute=useTCG;
+  const thead=document.getElementById('card-thead');
+  thead.className=showRoute?'trow thead':'trow thead no-route';
+  thead.innerHTML=showRoute?'<span>#</span><span>Name</span><span>Set</span><span>Code</span><span>Rar</span><span>Price</span><span>Route</span>':'<span>#</span><span>Name</span><span>Set</span><span>Code</span><span>Rar</span><span>Price</span>';
+  document.getElementById('card-rows').innerHTML=cards.map(c=>{
+    const isSingle=c.route==='single';
+    const routeCell=showRoute?'<span>'+(isSingle?'<span class="badge b-single">single</span>':'<span class="badge b-lot">lot</span>')+'</span>':'';
+    return'<div class="'+(showRoute?'trow':'trow no-route')+'" style="'+(isSingle?'background:rgba(45,125,111,0.04)':'')+'"><span style="font-family:var(--mono);font-size:10px;color:var(--ink3)">'+c.scanIdx+'</span><span title="'+c.name+'">'+c.name+'</span><span style="color:var(--ink2);font-size:11px">'+(c.setName||'—')+'</span><span>'+(c.setCode?'<span class="set-pill">'+c.setCode+'</span>':'<span style="color:var(--ink3);font-size:10px">…</span>')+'</span><span>'+rarBadge(c.rarity)+'</span><span style="font-family:var(--mono);font-size:11px;color:var(--ink3)">'+(c.price>0?'$'+c.price.toFixed(2):'—')+'</span>'+routeCell+'</div>';
+  }).join('');
+}
+
+function renderSingles(){
+  const useTCG=tcgToggle.checked;
+  if(!useTCG){document.getElementById('s-singles').style.display='none';return;}
+  const singles=cards.filter(c=>c.route==='single').sort((a,b)=>b.price-a.price);
+  const thresh=parseFloat(document.getElementById('threshold').value)||0.05;
+  const totalVal=singles.reduce((s,c)=>s+c.price,0);
+  if(singles.length===0){document.getElementById('s-singles').style.display='none';return;}
+  document.getElementById('s-singles').style.display='block';
+  document.getElementById('singles-desc').textContent=singles.length+' card(s) ≥ $'+thresh.toFixed(2)+' not in your store — total value $'+totalVal.toFixed(2)+'.';
+  document.getElementById('singles-rows').innerHTML=singles.map(c=>'<div class="srow"><span style="font-family:var(--mono);font-size:10px;color:var(--teal-text)">#'+c.scanIdx+'</span><span title="'+c.name+'" style="color:var(--ink)">'+c.name+'</span><span style="font-size:11px;color:var(--teal-text)">'+(c.setName||'—')+'</span><span>'+(c.setCode?'<span class="set-pill" style="background:#c5e8e3;color:var(--teal-text)">'+c.setCode+'</span>':'—')+'</span><span style="font-size:11px;color:var(--teal-text)">'+(c.condition||'—')+'</span><span style="font-family:var(--mono);font-size:11px;font-weight:500;color:var(--teal-text)">$'+c.price.toFixed(2)+'</span></div>').join('');
+}
+
+function buildSetFilter(){
+  const pool=cards.filter(c=>c.route==='lot');
+  const counts={};pool.forEach(c=>{const k=c.setCode||'Unknown';if(!counts[k])counts[k]={name:c.setName||'Unknown',count:0};counts[k].count++;});
+  excl=new Set();
+  document.getElementById('set-chips').innerHTML=Object.entries(counts).sort((a,b)=>b[1].count-a[1].count).map(([code,d])=>'<div class="set-chip included" id="sc-'+CSS.escape(code)+'" onclick="toggleSet(\''+code+'\')"><span>'+d.name+' <span style="font-size:9px;opacity:0.6">'+code+'</span></span><span style="font-size:10px;opacity:0.7">'+d.count+'</span></div>').join('');
+  document.getElementById('set-filter').style.display='block';updateFilterSum();
+}
+function toggleSet(code){const el=document.getElementById('sc-'+CSS.escape(code));if(excl.has(code)){excl.delete(code);el.className='set-chip included';}else{excl.add(code);el.className='set-chip excluded';}updateFilterSum();updateNote();}
+function selAll(){excl.clear();document.querySelectorAll('.set-chip').forEach(el=>el.className='set-chip included');updateFilterSum();updateNote();}
+function exclAll(){document.querySelectorAll('.set-chip').forEach(el=>{excl.add(el.id.replace('sc-',''));el.className='set-chip excluded';});updateFilterSum();updateNote();}
+function updateFilterSum(){const t=document.querySelectorAll('.set-chip').length;document.getElementById('filter-sum').textContent=excl.size===0?'All sets included':(t-excl.size)+' of '+t+' sets';}
+function filtered(){const pool=cards.filter(c=>c.route==='lot');return excl.size===0?pool:pool.filter(c=>!excl.has(c.setCode||'Unknown'));}
+
+function updateNote(){
+  if(!cards.length)return;
+  const warn=document.getElementById('warn-box');warn.style.display='none';
+  const f=filtered();
+  const rm=parseInt(document.getElementById('r-m').value)||0,rr=parseInt(document.getElementById('r-r').value)||0,ru=parseInt(document.getElementById('r-u').value)||0,rc=parseInt(document.getElementById('r-c').value)||0,rfill=parseInt(document.getElementById('r-fill').value)||0;
+  const cpl=rm+rr+ru+rc+rfill;
+  document.getElementById('rar-total').textContent=cpl;
+  const nl=parseInt(document.getElementById('nl').value)||5;
+  const vmin=parseFloat(document.getElementById('v-min').value)||0,vmax=parseFloat(document.getElementById('v-max').value)||0;
+  const poolVal=f.reduce((s,c)=>s+c.price,0),maxLots=cpl>0?Math.floor(f.length/cpl):0,estVpl=maxLots>0?poolVal/maxLots:0;
+  const avail={m:f.filter(c=>rarKey(c.rarity)==='m').length,r:f.filter(c=>rarKey(c.rarity)==='r').length,u:f.filter(c=>rarKey(c.rarity)==='u').length,c:f.filter(c=>rarKey(c.rarity)==='c').length};
+  const warnings=[];
+  if(rm*nl>avail.m)warnings.push('Need '+(rm*nl)+' mythics, have '+avail.m);
+  if(rr*nl>avail.r)warnings.push('Need '+(rr*nl)+' rares, have '+avail.r);
+  if(ru*nl>avail.u)warnings.push('Need '+(ru*nl)+' uncommons, have '+avail.u);
+  if(rc*nl>avail.c)warnings.push('Need '+(rc*nl)+' commons, have '+avail.c);
+  if(warnings.length){warn.textContent='⚠ '+warnings.join(' · ');warn.style.display='block';}
+  if(cpl>0){
+    document.getElementById('est-preview').style.display='block';
+    document.getElementById('est-pool').textContent=f.length+' cards';
+    document.getElementById('est-total').textContent='$'+poolVal.toFixed(2);
+    document.getElementById('est-cpl').textContent=cpl;
+    document.getElementById('est-vpl').textContent='~$'+estVpl.toFixed(2);
+    document.getElementById('est-maxlots').textContent=maxLots;
+  }
+  const dupLabel=maxDup===0?'unlimited':maxDup===1?'no dupes':'max '+maxDup+' copies';
+  let note=nl+' lot(s) × '+cpl+' cards · '+dupLabel;
+  if(vmin>0||vmax>0)note+=' · value target $'+vmin.toFixed(2)+'–$'+vmax.toFixed(2);
+  document.getElementById('cfg-note').textContent=note+'.';
+}
+document.getElementById('nl').addEventListener('input',updateNote);
+
+function build(){
+  const pool=filtered();
+  const nl=Math.max(1,parseInt(document.getElementById('nl').value)||5);
+  const rm=parseInt(document.getElementById('r-m').value)||0,rr=parseInt(document.getElementById('r-r').value)||0,ru=parseInt(document.getElementById('r-u').value)||0,rc=parseInt(document.getElementById('r-c').value)||0,rfill=parseInt(document.getElementById('r-fill').value)||0;
+  const cpl=rm+rr+ru+rc+rfill;if(cpl===0){alert('Set at least 1 card per lot.');return;}
+  const vmin=parseFloat(document.getElementById('v-min').value)||0,vmax=parseFloat(document.getElementById('v-max').value)||0;
+  const useValFilter=vmin>0||vmax>0;
+  const rarPools={
+    m:[...pool.filter(c=>rarKey(c.rarity)==='m')].sort((a,b)=>b.price-a.price),
+    r:[...pool.filter(c=>rarKey(c.rarity)==='r')].sort((a,b)=>b.price-a.price),
+    u:[...pool.filter(c=>rarKey(c.rarity)==='u')].sort((a,b)=>b.price-a.price),
+    c:[...pool.filter(c=>rarKey(c.rarity)==='c')].sort((a,b)=>b.price-a.price)
+  };
+  const used=new Set(),lotArrays=Array.from({length:nl},()=>[]),copiesPerLot=Array.from({length:nl},()=>({}));
+  function canAdd(li,name){if(maxDup===0)return true;return(copiesPerLot[li][name]||0)<maxDup;}
+  function doAdd(li,card){used.add(card.scanIdx);lotArrays[li].push(card);copiesPerLot[li][card.name]=(copiesPerLot[li][card.name]||0)+1;}
+  const assignRarity=(rk,target)=>{if(target<=0)return;for(let li=0;li<nl;li++){let filled=0;for(let ci=0;ci<rarPools[rk].length&&filled<target;ci++){const card=rarPools[rk][ci];if(used.has(card.scanIdx))continue;if(!canAdd(li,card.name))continue;doAdd(li,card);filled++;}}};
+  ['m','r','u','c'].forEach(rk=>assignRarity(rk,{m:rm,r:rr,u:ru,c:rc}[rk]));
+  if(rfill>0){
+    const remaining=[...pool.filter(c=>!used.has(c.scanIdx))].sort((a,b)=>b.price-a.price);
+    let ri=0;
+    for(let pass=0;pass<rfill;pass++){for(let li=0;li<nl;li++){while(ri<remaining.length){const card=remaining[ri++];if(!canAdd(li,card.name))continue;doAdd(li,card);break;}}}
+  }
+  lotArrays.forEach(lot=>lot.sort((a,b)=>a.scanIdx-b.scanIdx));
+  lots=lotArrays.filter(l=>l.length>0);
+  const sm={};lots.forEach((lot,li)=>lot.forEach(c=>{if(!sm[c.scanIdx])sm[c.scanIdx]={card:c,lotNums:[]};sm[c.scanIdx].lotNums.push(li+1);}));
+  pullRows=Object.values(sm).sort((a,b)=>a.card.scanIdx-b.card.scanIdx);
+  const skipped=pool.filter(c=>!used.has(c.scanIdx)).length;
+  const sk=document.getElementById('skip-bar');sk.textContent=skipped?skipped+' card(s) not assigned — increase lot count or fill slots.':'';sk.style.display=skipped?'block':'none';
+  renderPull();renderLots(useValFilter,vmin,vmax);
+  document.getElementById('s-lots').style.display='block';
+  document.getElementById('s-lots').scrollIntoView({behavior:'smooth',block:'start'});
+  doTab('pull');
+}
+
+function renderPull(){
+  document.getElementById('pull-body').innerHTML=pullRows.map((row,i)=>{
+    const c=row.card,firstLot=row.lotNums[0],borderColor=lc(firstLot-1).tx;
+    const chips=row.lotNums.map(n=>{const col=lc(n-1);return'<span class="lot-pill" style="background:'+col.bg+';color:'+col.tx+'">Lot '+n+'</span>';}).join('');
+    return'<div class="pull-card-row" id="pr-'+i+'" style="border-left-color:'+borderColor+'" onclick="tog('+i+')">'+'<div class="pull-check-cell"><button class="check-btn" id="cb-'+i+'" onclick="event.stopPropagation();tog('+i+')"></button></div>'+'<div class="pull-main-cell"><div class="pull-name-row"><span class="pull-name">'+c.name+'</span>'+chips+'</div><div class="pull-meta-row"><span class="pull-scan">#'+c.scanIdx+'</span><span class="pull-set">'+(c.setCode||c.setName||'—')+'</span><span style="font-family:var(--mono);font-size:11px;color:var(--ink3)">'+(c.price>0?'$'+c.price.toFixed(2):'—')+'</span></div></div>'+'<div class="pull-rar-cell">'+rarBadgeMd(c.rarity)+'</div></div>';
+  }).join('');
+  updateProg();
+}
+function tog(i){const row=document.getElementById('pr-'+i),btn=document.getElementById('cb-'+i);btn.classList.toggle('checked');row.classList.toggle('done',btn.classList.contains('checked'));updateProg();}
+function updateProg(){const total=pullRows.length,done=document.querySelectorAll('.check-btn.checked').length;document.getElementById('prog-lbl').textContent=done+' of '+total+' pulled';document.getElementById('prog-fill').style.width=total?Math.round(done/total*100)+'%':'0%';document.getElementById('done-bar').style.display=(done>0&&done===total)?'block':'none';}
+function resetChecks(){document.querySelectorAll('.check-btn').forEach(b=>b.classList.remove('checked'));document.querySelectorAll('.pull-card-row').forEach(r=>r.classList.remove('done'));updateProg();}
+
+function renderLots(useValFilter,vmin,vmax){
+  const maxVal=Math.max(...lots.map(l=>l.reduce((s,c)=>s+c.price,0)),0.01);
+  document.getElementById('lots-grid').innerHTML=lots.map((lot,i)=>{
+    const col=lc(i),val=lot.reduce((s,c)=>s+c.price,0);
+    const vc=useValFilter?(vmin>0&&val<vmin?'color:#633806':vmax>0&&val>vmax?'color:#791f1f':'color:var(--teal-text)'):'color:var(--ink2)';
+    const rarCounts={m:0,r:0,u:0,c:0};lot.forEach(c=>rarCounts[rarKey(c.rarity)]++);
+    const setSummary=[...new Set(lot.map(c=>c.setCode).filter(Boolean))].slice(0,3).join(' · ');
+    const rarBar=['m','r','u','c'].filter(k=>rarCounts[k]>0).map(k=>'<span class="badge '+{m:'b-m',r:'b-r',u:'b-u',c:'b-c'}[k]+'">'+rarCounts[k]+k.toUpperCase()+'</span>').join('');
+    const items=lot.map(c=>'<div class="lot-item"><span class="lot-idx">#'+c.scanIdx+'</span><span class="lot-name" title="'+c.name+'">'+c.name+'</span><span class="lot-meta">'+(c.setCode||'')+' '+rarBadge(c.rarity)+'</span></div>').join('');
+    return'<div class="lot-card"><div class="color-bar" style="background:'+col.tx+'"></div><div class="lot-head"><div class="lot-num-lbl">LOT '+String(i+1).padStart(2,'0')+'</div><div class="lot-title-row"><span class="lot-count">'+lot.length+' cards</span><span class="lot-val" style="'+vc+'">$'+val.toFixed(2)+'</span></div>'+(setSummary?'<div style="font-family:var(--mono);font-size:10px;color:var(--ink3);margin-top:3px">'+setSummary+'</div>':'')+'<div class="value-bar"><div class="value-fill" style="width:'+Math.round(val/maxVal*100)+'%;background:'+col.tx+'"></div></div><div class="lot-rarity-bar">'+rarBar+'</div></div><div class="lot-items">'+items+'</div></div>';
+  }).join('');
+}
+
+function doTab(t){document.querySelectorAll('.tab').forEach((el,i)=>el.classList.toggle('active',['pull','lots'][i]===t));document.getElementById('tp-pull').classList.toggle('active',t==='pull');document.getElementById('tp-lots').classList.toggle('active',t==='lots');}
+function dl(rows,name){const csv=rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download=name;a.click();}
+function expSingles(){const singles=cards.filter(c=>c.route==='single').sort((a,b)=>b.price-a.price);dl([['TCGplayer ID','Product Line','Set Name','Product Name','Condition','Add to Inventory','TCG Marketplace Price'],...singles.map(c=>[c.tcgId||'','Magic: The Gathering',c.setName||'',c.name,c.condition||'Near Mint','1',c.price.toFixed(2)])],'tcgplayer_singles_import.csv');}
+function expSinglesPull(){const singles=cards.filter(c=>c.route==='single').sort((a,b)=>a.scanIdx-b.scanIdx);dl([['Scan #','Name','Set','Set Code','Card #','Condition','Price'],...singles.map(c=>[c.scanIdx,c.name,c.setName,c.setCode,c.cardNum,c.condition,c.price.toFixed(2)])],'singles_pull_sheet.csv');}
+function expPull(){dl([['Scan #','Name','Card #','Set','Set Code','Rarity','Condition','Lot(s)','Price'],...pullRows.map(r=>[r.card.scanIdx,r.card.name,r.card.cardNum,r.card.setName,r.card.setCode,r.card.rarity,r.card.condition,r.lotNums.map(n=>'Lot '+n).join(' + '),r.card.price>0?r.card.price.toFixed(2):''])],'pull_sheet.csv');}
+function expLots(){dl([['Lot','Scan #','Name','Card #','Set','Set Code','Rarity','Condition','Price'],...lots.flatMap((lot,i)=>lot.map(c=>[i+1,c.scanIdx,c.name,c.cardNum,c.setName,c.setCode,c.rarity,c.condition,c.price>0?c.price.toFixed(2):'']))],'tcg_lots.csv');}
+function copySum(){navigator.clipboard.writeText(lots.map((lot,i)=>{const v=lot.reduce((s,c)=>s+c.price,0);return'Lot '+(i+1)+' ('+lot.length+' cards, $'+v.toFixed(2)+'): '+lot.map(c=>'#'+c.scanIdx+' '+c.name+(c.setCode?' ['+c.setCode+']':'')).join(', ');}).join('\n'));}
+function clearAll(){
+  cards=[];lots=[];pullRows=[];excl=new Set();invSet=new Set();hasInv=false;
+  ['s-cards','s-config','s-lots','s-singles'].forEach(id=>document.getElementById(id).style.display='none');
+  document.getElementById('split-banner').style.display='none';document.getElementById('set-filter').style.display='none';document.getElementById('est-preview').style.display='none';
+  document.getElementById('lbl-scan').textContent='';document.getElementById('lbl-inv').textContent='';
+  document.getElementById('dz-scan').className='upload-zone';document.getElementById('dz-inv').className='upload-zone';
+  document.getElementById('fi-scan').value='';document.getElementById('fi-inv').value='';
+  tcgToggle.checked=false;tcgSection.classList.remove('visible');showErr('');
+}
+</script>
+</body>
+</html>
