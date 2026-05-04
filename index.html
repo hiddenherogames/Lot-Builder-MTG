@@ -753,36 +753,48 @@ function build(){
     copiesPerLot[li][k]=(copiesPerLot[li][k]||0)+1;
   }
 
+  // For each rarity tier, walk the cards in price-descending order and
+  // assign each one to the lot that (a) still needs more of this rarity,
+  // (b) can accept this name (not already in the lot), and (c) currently
+  // has the FEWEST cards in this tier — round-robin tiebreak by lot index.
+  //
+  // The previous "for each lot, fill it up" loop greedily consumed
+  // popular reprints for early lots, leaving later lots starved when
+  // singletons had already been claimed. The card-first approach
+  // distributes singletons across lots and balances both size and value:
+  // the priciest card goes to lot 0, the next to lot 1, ..., wrapping
+  // back to lot 0 only after every lot has had its turn.
   const assignRarity=(rk,target)=>{
     if(target<=0)return;
-    for(let li=0;li<nl;li++){
-      let filled=0;
-      for(let ci=0;ci<rarPools[rk].length&&filled<target;ci++){
-        const card=rarPools[rk][ci];
-        if(used.has(card.scanIdx))continue;
+    const tierFilled=Array(nl).fill(0);
+    for(const card of rarPools[rk]){
+      if(used.has(card.scanIdx))continue;
+      let bestLi=-1,bestCount=Infinity;
+      for(let li=0;li<nl;li++){
+        if(tierFilled[li]>=target)continue;
         if(!canAdd(li,card.name))continue;
-        doAdd(li,card);filled++;
+        if(tierFilled[li]<bestCount){bestCount=tierFilled[li];bestLi=li;}
       }
+      if(bestLi>=0){doAdd(bestLi,card);tierFilled[bestLi]++;}
     }
   };
   ['m','r','u','c'].forEach(rk=>assignRarity(rk,{m:rm,r:rr,u:ru,c:rc}[rk]));
 
   if(rfill>0){
-    // For each lot, scan the whole remaining pool looking for a card
-    // that fits. Cards skipped due to dedup remain available for other
-    // lots — the previous version used a forward-only cursor that
-    // permanently discarded any card that failed canAdd, which left
-    // later lots short when popular reprints clustered at the top of
-    // the queue.
+    // Same card-first round-robin for the fill tier: walk every still-
+    // unassigned card in price-descending order and place it in the
+    // lot with the fewest fill cards that can still accept it.
     const remainingSorted=[...pool].sort((a,b)=>b.price-a.price);
-    for(let li=0;li<nl;li++){
-      let filled=0;
-      for(let ci=0;ci<remainingSorted.length&&filled<rfill;ci++){
-        const card=remainingSorted[ci];
-        if(used.has(card.scanIdx))continue;
+    const fillFilled=Array(nl).fill(0);
+    for(const card of remainingSorted){
+      if(used.has(card.scanIdx))continue;
+      let bestLi=-1,bestCount=Infinity;
+      for(let li=0;li<nl;li++){
+        if(fillFilled[li]>=rfill)continue;
         if(!canAdd(li,card.name))continue;
-        doAdd(li,card);filled++;
+        if(fillFilled[li]<bestCount){bestCount=fillFilled[li];bestLi=li;}
       }
+      if(bestLi>=0){doAdd(bestLi,card);fillFilled[bestLi]++;}
     }
   }
 
