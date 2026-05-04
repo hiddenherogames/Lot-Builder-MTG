@@ -590,10 +590,19 @@ function updateFilterSum(){const t=document.querySelectorAll('.set-chip').length
 function filtered(){const pool=cards.filter(c=>c.route==='lot');return excl.size===0?pool:pool.filter(c=>!excl.has(c.setCode||'Unknown'));}
 
 // Find the true maximum number of lots we could build given the rarity
-// targets. The bottleneck is whichever tier runs out of supply first —
-// it's never just total_cards / cards_per_lot, because if you target 1
-// mythic per lot and only have 30 mythics in the pool you can't build 60
-// lots even if you have 6000 cards total.
+// targets AND the same-name no-dupes rule. The bottleneck is whichever
+// constraint runs out first.
+//
+// For each rarity tier with target k > 0, we apply the same-name rule.
+// Given names with copy counts c1..cp, the max number of lots N that the
+// tier can supply is the largest N where:
+//     sum over names of min(c_i, N)  >=  N * k
+// (Each name can supply at most one copy to any single lot, so a name
+// with 5 copies can serve at most 5 different lots.) We search N upward
+// from 0 until the inequality fails.
+//
+// The fill tier accepts ANY rarity, so for it we use the combined pool's
+// uniqueness across the whole filtered set.
 function computeMaxLots(){
   if(!cards.length)return{n:0,bottleneck:null};
   const f=filtered();
@@ -604,17 +613,42 @@ function computeMaxLots(){
         rfill=parseInt(document.getElementById('r-fill').value)||0;
   const cpl=rm+rr+ru+rc+rfill;
   if(cpl===0)return{n:0,bottleneck:null};
-  const avail={
-    m:f.filter(c=>rarKey(c.rarity)==='m').length,
-    r:f.filter(c=>rarKey(c.rarity)==='r').length,
-    u:f.filter(c=>rarKey(c.rarity)==='u').length,
-    c:f.filter(c=>rarKey(c.rarity)==='c').length,
-  };
+
+  // Same name normalizer used by build()
+  const nameKey=n=>(n||'').toLowerCase().split('//')[0].trim().replace(/\s+/g,' ');
+
+  // Get copy counts per unique name within a rarity (or the full pool).
+  function counts(filterFn){
+    const m=new Map();
+    for(const c of f){
+      if(filterFn&&!filterFn(c))continue;
+      const k=nameKey(c.name);
+      m.set(k,(m.get(k)||0)+1);
+    }
+    return [...m.values()];
+  }
+  // Largest N where sum(min(c_i, N)) >= N*k. We binary-search since the
+  // left side is monotonically non-decreasing in N relative to the right.
+  function maxLotsFor(copies,k){
+    if(k<=0)return Infinity;
+    if(!copies.length)return 0;
+    const total=copies.reduce((a,b)=>a+b,0);
+    let lo=0,hi=Math.floor(total/k);
+    while(lo<hi){
+      const mid=Math.ceil((lo+hi+1)/2);
+      let supply=0;for(const c of copies){supply+=Math.min(c,mid);if(supply>=mid*k)break;}
+      if(supply>=mid*k)lo=mid;else hi=mid-1;
+    }
+    return lo;
+  }
+
   const limits=[{n:Math.floor(f.length/cpl),why:'pool'}];
-  if(rm>0)limits.push({n:Math.floor(avail.m/rm),why:'mythic'});
-  if(rr>0)limits.push({n:Math.floor(avail.r/rr),why:'rare'});
-  if(ru>0)limits.push({n:Math.floor(avail.u/ru),why:'uncommon'});
-  if(rc>0)limits.push({n:Math.floor(avail.c/rc),why:'common'});
+  if(rm>0)limits.push({n:maxLotsFor(counts(c=>rarKey(c.rarity)==='m'),rm),why:'mythic'});
+  if(rr>0)limits.push({n:maxLotsFor(counts(c=>rarKey(c.rarity)==='r'),rr),why:'rare'});
+  if(ru>0)limits.push({n:maxLotsFor(counts(c=>rarKey(c.rarity)==='u'),ru),why:'uncommon'});
+  if(rc>0)limits.push({n:maxLotsFor(counts(c=>rarKey(c.rarity)==='c'),rc),why:'common'});
+  if(rfill>0)limits.push({n:maxLotsFor(counts(null),rfill),why:'fill'});
+
   const min=limits.reduce((a,b)=>b.n<a.n?b:a);
   return{n:Math.max(0,min.n),bottleneck:min.why};
 }
@@ -636,11 +670,20 @@ function updateNote(){
   const {n:maxLots,bottleneck}=computeMaxLots();
   const estVpl=maxLots>0?poolVal/maxLots:0;
   const avail={m:f.filter(c=>rarKey(c.rarity)==='m').length,r:f.filter(c=>rarKey(c.rarity)==='r').length,u:f.filter(c=>rarKey(c.rarity)==='u').length,c:f.filter(c=>rarKey(c.rarity)==='c').length};
+  // Same-name aware warnings: if there aren't enough UNIQUE names in a
+  // tier to fill nl lots without dupes, flag it (this is what catches
+  // the "102 unassigned" problem when popular reprints saturate every lot).
+  const nameKey=n=>(n||'').toLowerCase().split('//')[0].trim().replace(/\s+/g,' ');
+  const uniqInTier=k=>new Set(f.filter(c=>rarKey(c.rarity)===k).map(c=>nameKey(c.name))).size;
   const warnings=[];
   if(rm*nl>avail.m)warnings.push(`Need ${rm*nl} mythics, have ${avail.m}`);
+  else if(rm>0&&uniqInTier('m')<rm*nl&&rm*nl>uniqInTier('m'))warnings.push(`Only ${uniqInTier('m')} unique mythic names — need ${rm*nl} for no-dupe lots`);
   if(rr*nl>avail.r)warnings.push(`Need ${rr*nl} rares, have ${avail.r}`);
+  else if(rr>0&&uniqInTier('r')<rr*nl)warnings.push(`Only ${uniqInTier('r')} unique rare names — need ${rr*nl} for no-dupe lots`);
   if(ru*nl>avail.u)warnings.push(`Need ${ru*nl} uncommons, have ${avail.u}`);
+  else if(ru>0&&uniqInTier('u')<ru*nl)warnings.push(`Only ${uniqInTier('u')} unique uncommon names — need ${ru*nl} for no-dupe lots`);
   if(rc*nl>avail.c)warnings.push(`Need ${rc*nl} commons, have ${avail.c}`);
+  else if(rc>0&&uniqInTier('c')<rc*nl)warnings.push(`Only ${uniqInTier('c')} unique common names — need ${rc*nl} for no-dupe lots`);
   if(warnings.length){warn.textContent='⚠ '+warnings.join(' · ');warn.style.display='block';}
   if(cpl>0){
     document.getElementById('est-preview').style.display='block';
@@ -658,9 +701,8 @@ function updateNote(){
       document.getElementById('max-lots-n').textContent=maxLots;
       maxBtn.style.display='inline-flex';
       maxBtn.classList.toggle('bottleneck',bottleneck&&bottleneck!=='pool');
-      maxBtn.title=bottleneck&&bottleneck!=='pool'
-        ?`Set lot count to ${maxLots} (limited by ${bottleneck} supply: ${avail[bottleneck[0]]} available, ${({mythic:rm,rare:rr,uncommon:ru,common:rc})[bottleneck]} per lot)`
-        :`Set lot count to ${maxLots} (limited by total pool size)`;
+      const reason={pool:'limited by total pool size',mythic:`limited by mythic supply / unique names`,rare:`limited by rare supply / unique names`,uncommon:`limited by uncommon supply / unique names`,common:`limited by common supply / unique names`,fill:`limited by fill-tier unique names available`}[bottleneck]||'';
+      maxBtn.title=`Set lot count to ${maxLots} — ${reason}. Accounts for the no-same-name-per-lot rule.`;
     }else{
       maxBtn.style.display='none';
     }
