@@ -209,6 +209,36 @@ input:checked+.slider-t:before{background:var(--surface);transform:translateX(18
 .btn-max.bottleneck:hover{background:#f5dfb0;}
 .btn-max strong{font-weight:600;font-size:12px;}
 .bn-tag{font-family:var(--mono);font-size:10px;color:var(--ink3);font-weight:400;margin-left:6px;}
+
+.lot-type-row{display:flex;align-items:center;gap:14px;padding:14px 0 10px;border-bottom:1px solid var(--border);margin-bottom:14px;flex-wrap:wrap;}
+.lot-type-label{font-size:11px;font-family:var(--mono);color:var(--ink2);letter-spacing:0.06em;text-transform:uppercase;flex-shrink:0;}
+.lot-type-btns{display:flex;gap:6px;flex-wrap:wrap;}
+.lt-btn{padding:7px 12px;border-radius:var(--radius);border:1px solid var(--border2);background:transparent;cursor:pointer;font-family:inherit;font-size:12px;font-weight:500;color:var(--ink2);transition:all 0.12s;display:inline-flex;align-items:baseline;gap:4px;}
+.lt-btn:hover{background:var(--surface3);}
+.lt-btn.active{background:var(--ink);color:var(--surface);border-color:var(--ink);}
+.lt-btn .lt-sub{font-family:var(--mono);font-size:10px;opacity:0.6;font-weight:400;}
+.lt-btn.active .lt-sub{opacity:0.7;}
+
+.color-spread{display:flex;gap:3px;flex-wrap:wrap;margin-top:6px;}
+.cs-pill{font-family:var(--mono);font-size:9px;padding:2px 5px;border-radius:3px;border:1px solid var(--border);background:white;letter-spacing:0.05em;display:inline-flex;align-items:center;gap:3px;line-height:1;}
+.cs-dot{width:7px;height:7px;border-radius:50%;display:inline-block;}
+.cs-W{background:#fdf6dd;color:#7a6516;border-color:#e8d97a;}.cs-W .cs-dot{background:#e8c44d;}
+.cs-U{background:#dde9fb;color:#1d3a6b;border-color:#7da9e6;}.cs-U .cs-dot{background:#3978d4;}
+.cs-B{background:#dcdcdc;color:#1c1c1c;border-color:#7a7a7a;}.cs-B .cs-dot{background:#3a3a3a;}
+.cs-R{background:#fadcd6;color:#7a2316;border-color:#e88876;}.cs-R .cs-dot{background:#cc3e22;}
+.cs-G{background:#dcecdc;color:#1c5021;border-color:#76b07a;}.cs-G .cs-dot{background:#3d8b3d;}
+.cs-multi{background:#fbe9d6;color:#7a4a16;border-color:#e8b676;}.cs-multi .cs-dot{background:#cc8b22;}
+.cs-artifact{background:#e8e4dd;color:#3d3326;border-color:#a89a82;}.cs-artifact .cs-dot{background:#8a7a5c;}
+.cs-land,.cs-basic{background:#e6dec8;color:#4a3d1c;border-color:#a89a76;}.cs-land .cs-dot,.cs-basic .cs-dot{background:#8a6e3c;}
+.cs-colorless,.cs-unknown{background:#f0f0f0;color:#5a5a5a;border-color:#bdbdbd;}.cs-colorless .cs-dot,.cs-unknown .cs-dot{background:#9a9a9a;}
+
+.sort-toggle{display:inline-flex;border:1px solid var(--border2);border-radius:var(--radius);overflow:hidden;}
+.sort-btn{padding:6px 12px;background:transparent;border:none;cursor:pointer;font-family:inherit;font-size:11px;color:var(--ink2);font-weight:500;transition:all 0.12s;}
+.sort-btn+.sort-btn{border-left:1px solid var(--border2);}
+.sort-btn:hover{background:var(--surface3);}
+.sort-btn.active{background:var(--ink);color:var(--surface);}
+.sort-toggle-lbl{font-family:var(--mono);font-size:10px;color:var(--ink3);letter-spacing:0.06em;text-transform:uppercase;align-self:center;margin-right:8px;}
+.lot-divider{padding:10px 16px 8px;font-family:var(--mono);font-size:11px;letter-spacing:0.08em;font-weight:600;background:var(--surface2);border-left:4px solid;border-bottom:1px solid var(--border);}
 </style>
 
 <div class="app">
@@ -301,6 +331,15 @@ input:checked+.slider-t:before{background:var(--surface);transform:translateX(18
 <div class="panel" id="s-config" style="display:none">
   <div class="step-label">03 — Configure lots</div>
 
+  <div class="lot-type-row">
+    <span class="lot-type-label">Lot type</span>
+    <div class="lot-type-btns">
+      <button class="lt-btn active" id="lt-standard" onclick="setLotType('standard')">Standard <span class="lt-sub">40ct mix</span></button>
+      <button class="lt-btn" id="lt-rare" onclick="setLotType('rare')">Rare lot <span class="lt-sub">50ct rares</span></button>
+      <button class="lt-btn" id="lt-bulk" onclick="setLotType('bulk')">Bulk lot <span class="lt-sub">500ct</span></button>
+    </div>
+  </div>
+
   <div class="set-filter" id="set-filter">
     <div class="sf-lbl"><span>Set filter</span><span id="filter-sum" style="color:var(--teal-text)"></span></div>
     <div class="set-chips" id="set-chips"></div>
@@ -369,8 +408,13 @@ input:checked+.slider-t:before{background:var(--surface);transform:translateX(18
     <div class="tab" onclick="doTab('lots')">Lot breakdown</div>
   </div>
   <div id="tp-pull" class="tab-panel active">
-    <div class="info-row"><span class="info-dot"></span>Flip through your stack — tap each card as you pull it</div>
+    <div class="info-row"><span class="info-dot"></span><span id="pull-tip">Pull each lot in order — finished cards stack into Lot 01, then Lot 02, etc.</span></div>
     <div class="action-row">
+      <span class="sort-toggle-lbl">Order</span>
+      <div class="sort-toggle">
+        <button class="sort-btn active" id="sort-lot" onclick="setPullSort('lot')">By lot</button>
+        <button class="sort-btn" id="sort-scan" onclick="setPullSort('scan')">By scan #</button>
+      </div>
       <button class="btn btn-sm" onclick="expPull()">Export pull sheet</button>
       <button class="btn btn-sm" onclick="resetChecks()">Reset progress</button>
     </div>
@@ -400,7 +444,43 @@ const LC=[
 ];
 function lc(i){return LC[i%LC.length];}
 
-let cards=[],lots=[],pullRows=[],excl=new Set(),invSet=new Set(),hasInv=false,maxDup=1;
+let cards=[],lots=[],pullRows=[],excl=new Set(),invSet=new Set(),hasInv=false,maxDup=1,lotType='standard',pullSort='lot';
+
+function setPullSort(s){
+  pullSort=s;
+  document.getElementById('sort-lot').classList.toggle('active',s==='lot');
+  document.getElementById('sort-scan').classList.toggle('active',s==='scan');
+  document.getElementById('pull-tip').textContent=s==='lot'
+    ?'Pull each lot in order — finished cards stack into Lot 01, then Lot 02, etc.'
+    :'Flip through your scan stack — each card shows its lot label';
+  if(pullRows.length)renderPull();
+  scheduleSave();
+}
+
+// Lot type presets — fill rarity targets based on the kind of lot the
+// user is building. Each preset is just a quick-fill convenience; the
+// user can still manually tweak any input afterward. Dedup behavior
+// (no same-name per lot) applies to all lot types equally.
+const LOT_PRESETS={
+  standard:{m:0,r:1,u:3,c:6,fill:30}, // 40-card mixed lot
+  rare:    {m:2,r:48,u:0,c:0,fill:0}, // 50-card all-rares lot
+  bulk:    {m:0,r:0,u:100,c:400,fill:0}, // 500-card commons-and-uncommons
+};
+function setLotType(t){
+  const p=LOT_PRESETS[t];if(!p)return;
+  lotType=t;
+  ['standard','rare','bulk'].forEach(k=>{
+    const el=document.getElementById('lt-'+k);
+    if(el)el.classList.toggle('active',k===t);
+  });
+  document.getElementById('r-m').value=p.m;
+  document.getElementById('r-r').value=p.r;
+  document.getElementById('r-u').value=p.u;
+  document.getElementById('r-c').value=p.c;
+  document.getElementById('r-fill').value=p.fill;
+  updateNote();
+  scheduleSave();
+}
 
 function setDup(n){
   maxDup=n;
@@ -522,7 +602,7 @@ async function enrich(){
   for(let i=0;i<pairs.length;i+=BATCH){
     const batch=pairs.slice(i,i+BATCH);
     try{const resp=await fetch('https://api.scryfall.com/cards/collection',{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify({identifiers:batch})});
-      if(resp.ok){const d=await resp.json();(d.data||[]).forEach(card=>{const sf={setName:card.set_name||'',setCode:(card.set||'').toUpperCase(),tier:1,tcgId:card.tcgplayer_id||null};rm[card.name+'|'+card.collector_number]=sf;rm[card.name.toLowerCase()+'|'+card.collector_number]=sf;});(d.not_found||[]).forEach(id=>{if(id.name)nameOnly.push(id.name);});}}catch{}
+      if(resp.ok){const d=await resp.json();(d.data||[]).forEach(card=>{const sf={setName:card.set_name||'',setCode:(card.set||'').toUpperCase(),tier:1,tcgId:card.tcgplayer_id||null,colors:card.colors||card.color_identity||[],typeLine:card.type_line||''};rm[card.name+'|'+card.collector_number]=sf;rm[card.name.toLowerCase()+'|'+card.collector_number]=sf;});(d.not_found||[]).forEach(id=>{if(id.name)nameOnly.push(id.name);});}}catch{}
     sfBar('load',`Scryfall: exact ${Math.min(i+BATCH,pairs.length)}/${pairs.length}…`);
     if(i+BATCH<pairs.length)await delay(100);
   }
@@ -530,10 +610,10 @@ async function enrich(){
   for(let i=0;i<still.length;i+=BATCH){
     const batch=still.slice(i,i+BATCH);
     try{const resp=await fetch('https://api.scryfall.com/cards/collection',{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify({identifiers:batch.map(n=>({name:n}))})});
-      if(resp.ok){const d=await resp.json();(d.data||[]).forEach(card=>{const sf={setName:card.set_name||'',setCode:(card.set||'').toUpperCase(),tier:2,tcgId:card.tcgplayer_id||null};rm[card.name+'|']=sf;rm[card.name.toLowerCase()+'|']=sf;});}}catch{}
+      if(resp.ok){const d=await resp.json();(d.data||[]).forEach(card=>{const sf={setName:card.set_name||'',setCode:(card.set||'').toUpperCase(),tier:2,tcgId:card.tcgplayer_id||null,colors:card.colors||card.color_identity||[],typeLine:card.type_line||''};rm[card.name+'|']=sf;rm[card.name.toLowerCase()+'|']=sf;});}}catch{}
     if(i+BATCH<still.length)await delay(100);
   }
-  cards=cards.map(c=>{const sf=rm[c.name+'|'+c.cardNum]||rm[c.name.toLowerCase()+'|'+c.cardNum]||rm[c.name+'|']||rm[c.name.toLowerCase()+'|']||null;return sf?{...c,setName:sf.setName,setCode:sf.setCode,matchTier:sf.tier,tcgId:sf.tcgId}:c;});
+  cards=cards.map(c=>{const sf=rm[c.name+'|'+c.cardNum]||rm[c.name.toLowerCase()+'|'+c.cardNum]||rm[c.name+'|']||rm[c.name.toLowerCase()+'|']||null;return sf?{...c,setName:sf.setName,setCode:sf.setCode,matchTier:sf.tier,tcgId:sf.tcgId,colors:sf.colors,typeLine:sf.typeLine}:c;});
   tagCards();
   const t1=cards.filter(c=>c.matchTier===1).length,t2=cards.filter(c=>c.matchTier===2).length,un=cards.filter(c=>c.matchTier===0).length;
   sfBar('ok',`Matched ${t1+t2}/${cards.length} — exact: ${t1}, name: ${t2}${un?`, unmatched: ${un}`:''}`);
@@ -542,6 +622,21 @@ async function enrich(){
 }
 
 function rarKey(r){const l=(r||'').toLowerCase();if(l.includes('mythic'))return 'm';if(l.includes('rare'))return 'r';if(l.includes('uncommon'))return 'u';return 'c';}
+
+// Bucket cards into one of: W, U, B, R, G, multi, artifact, land, basic,
+// colorless, or unknown. Used to spread color/type evenly across lots.
+// Order of checks matters: we classify lands first because they're the
+// primary type, then artifacts (only when colorless), then colors.
+function colorBucket(c){
+  const tl=(c.typeLine||'').toLowerCase();
+  if(tl.includes('basic'))return 'basic';
+  if(tl.includes('land'))return 'land';
+  const colors=c.colors||[];
+  if(tl.includes('artifact')&&colors.length===0)return 'artifact';
+  if(colors.length===0)return tl?'colorless':'unknown';
+  if(colors.length>1)return 'multi';
+  return colors[0]; // 'W','U','B','R','G'
+}
 function rarBadge(r){const k=rarKey(r);return`<span class="badge ${{m:'b-m',r:'b-r',u:'b-u',c:'b-c'}[k]}">${k.toUpperCase()}</span>`;}
 function rarBadgeMd(r){const k=rarKey(r);const lbl={m:'Mythic',r:'Rare',u:'Uncommon',c:'Common'}[k];return`<span class="badge ${{m:'b-m',r:'b-r',u:'b-u',c:'b-c'}[k]}" style="font-size:10px;padding:2px 7px">${lbl}</span>`;}
 
@@ -755,46 +850,50 @@ function build(){
 
   // For each rarity tier, walk the cards in price-descending order and
   // assign each one to the lot that (a) still needs more of this rarity,
-  // (b) can accept this name (not already in the lot), and (c) currently
-  // has the FEWEST cards in this tier — round-robin tiebreak by lot index.
+  // (b) can accept this name (not already in the lot), and prefer the
+  // lot that currently has the FEWEST cards of this card's color/type
+  // bucket — so colors and types spread evenly across lots. Tiebreak by
+  // total tier-fill (round-robin balance), then by lot index.
   //
   // The previous "for each lot, fill it up" loop greedily consumed
-  // popular reprints for early lots, leaving later lots starved when
-  // singletons had already been claimed. The card-first approach
-  // distributes singletons across lots and balances both size and value:
-  // the priciest card goes to lot 0, the next to lot 1, ..., wrapping
-  // back to lot 0 only after every lot has had its turn.
+  // popular reprints for early lots, leaving later lots starved. The
+  // card-first approach distributes singletons and balances both size
+  // and value; the color tiebreak ensures bulk lots get a good mix of
+  // W/U/B/R/G/artifacts/lands rather than an accidental color glut.
+  const lotBuckets=Array.from({length:nl},()=>({}));
+  function assignToBest(card,filledArr,target){
+    const bucket=colorBucket(card);
+    let bestLi=-1,bestColor=Infinity,bestFill=Infinity;
+    for(let li=0;li<nl;li++){
+      if(filledArr[li]>=target)continue;
+      if(!canAdd(li,card.name))continue;
+      const cb=lotBuckets[li][bucket]||0;
+      if(cb<bestColor||(cb===bestColor&&filledArr[li]<bestFill)){
+        bestColor=cb;bestFill=filledArr[li];bestLi=li;
+      }
+    }
+    if(bestLi>=0){
+      doAdd(bestLi,card);filledArr[bestLi]++;
+      lotBuckets[bestLi][bucket]=(lotBuckets[bestLi][bucket]||0)+1;
+    }
+  }
   const assignRarity=(rk,target)=>{
     if(target<=0)return;
     const tierFilled=Array(nl).fill(0);
     for(const card of rarPools[rk]){
       if(used.has(card.scanIdx))continue;
-      let bestLi=-1,bestCount=Infinity;
-      for(let li=0;li<nl;li++){
-        if(tierFilled[li]>=target)continue;
-        if(!canAdd(li,card.name))continue;
-        if(tierFilled[li]<bestCount){bestCount=tierFilled[li];bestLi=li;}
-      }
-      if(bestLi>=0){doAdd(bestLi,card);tierFilled[bestLi]++;}
+      assignToBest(card,tierFilled,target);
     }
   };
   ['m','r','u','c'].forEach(rk=>assignRarity(rk,{m:rm,r:rr,u:ru,c:rc}[rk]));
 
   if(rfill>0){
-    // Same card-first round-robin for the fill tier: walk every still-
-    // unassigned card in price-descending order and place it in the
-    // lot with the fewest fill cards that can still accept it.
+    // Same card-first round-robin with color balance for the fill tier.
     const remainingSorted=[...pool].sort((a,b)=>b.price-a.price);
     const fillFilled=Array(nl).fill(0);
     for(const card of remainingSorted){
       if(used.has(card.scanIdx))continue;
-      let bestLi=-1,bestCount=Infinity;
-      for(let li=0;li<nl;li++){
-        if(fillFilled[li]>=rfill)continue;
-        if(!canAdd(li,card.name))continue;
-        if(fillFilled[li]<bestCount){bestCount=fillFilled[li];bestLi=li;}
-      }
-      if(bestLi>=0){doAdd(bestLi,card);fillFilled[bestLi]++;}
+      assignToBest(card,fillFilled,rfill);
     }
   }
 
@@ -812,10 +911,29 @@ function build(){
 }
 
 function renderPull(){
-  document.getElementById('pull-body').innerHTML=pullRows.map((row,i)=>{
+  // Build display order. We keep pullRows itself in scan order so that
+  // the per-row index `i` is stable — that way the DOM ids `cb-i`/`pr-i`
+  // don't shift when the user toggles sort modes, and pull progress
+  // tracked by check button is preserved across re-renders.
+  const indexed=pullRows.map((row,i)=>({row,i}));
+  if(pullSort==='lot'){
+    indexed.sort((a,b)=>{
+      const la=a.row.lotNums[0]||999,lb=b.row.lotNums[0]||999;
+      if(la!==lb)return la-lb;
+      return a.row.card.scanIdx-b.row.card.scanIdx;
+    });
+  }
+  let lastLot=null;
+  document.getElementById('pull-body').innerHTML=indexed.map(({row,i})=>{
     const c=row.card,firstLot=row.lotNums[0],borderColor=lc(firstLot-1).tx;
+    let divider='';
+    if(pullSort==='lot'&&firstLot!==lastLot){
+      const col=lc(firstLot-1),lotSize=lots[firstLot-1]?lots[firstLot-1].length:0;
+      divider=`<div class="lot-divider" style="border-left-color:${col.tx};color:${col.tx}">LOT ${String(firstLot).padStart(2,'0')} <span style="opacity:0.5;font-weight:400;margin-left:6px">${lotSize} cards</span></div>`;
+    }
+    lastLot=firstLot;
     const chips=row.lotNums.map(n=>{const col=lc(n-1);return`<span class="lot-pill" style="background:${col.bg};color:${col.tx}">Lot ${n}</span>`;}).join('');
-    return`<div class="pull-card-row" id="pr-${i}" style="border-left-color:${borderColor}" onclick="tog(${i})">
+    return divider+`<div class="pull-card-row" id="pr-${i}" style="border-left-color:${borderColor}" onclick="tog(${i})">
       <div class="pull-check-cell"><button class="check-btn" id="cb-${i}" onclick="event.stopPropagation();tog(${i})"></button></div>
       <div class="pull-main-cell">
         <div class="pull-name-row"><span class="pull-name">${c.name}</span>${chips}</div>
@@ -836,14 +954,18 @@ function resetChecks(){document.querySelectorAll('.check-btn').forEach(b=>b.clas
 
 function renderLots(useValFilter,vmin,vmax){
   const maxVal=Math.max(...lots.map(l=>l.reduce((s,c)=>s+c.price,0)),0.01);
+  const csLabels={W:'W',U:'U',B:'B',R:'R',G:'G',multi:'M',artifact:'Art',land:'Land',basic:'Basic',colorless:'C',unknown:'?'};
+  const csOrder=['W','U','B','R','G','multi','artifact','land','basic','colorless','unknown'];
   document.getElementById('lots-grid').innerHTML=lots.map((lot,i)=>{
     const col=lc(i),val=lot.reduce((s,c)=>s+c.price,0);
     const vc=useValFilter?(vmin>0&&val<vmin?'color:#633806':vmax>0&&val>vmax?'color:#791f1f':'color:var(--teal-text)'):'color:var(--ink2)';
     const rarCounts={m:0,r:0,u:0,c:0};lot.forEach(c=>rarCounts[rarKey(c.rarity)]++);
     const setSummary=[...new Set(lot.map(c=>c.setCode).filter(Boolean))].slice(0,3).join(' · ');
     const rarBar=(['m','r','u','c']).filter(k=>rarCounts[k]>0).map(k=>`<span class="badge ${{m:'b-m',r:'b-r',u:'b-u',c:'b-c'}[k]}">${rarCounts[k]}${k.toUpperCase()}</span>`).join('');
+    const buckets={};lot.forEach(c=>{const b=colorBucket(c);buckets[b]=(buckets[b]||0)+1;});
+    const csBar=csOrder.filter(b=>buckets[b]).map(b=>`<span class="cs-pill cs-${b}"><span class="cs-dot"></span>${buckets[b]} ${csLabels[b]}</span>`).join('');
     const items=lot.map(c=>`<div class="lot-item"><span class="lot-idx">#${c.scanIdx}</span><span class="lot-name" title="${c.name}">${c.name}</span><span class="lot-meta">${c.setCode||''} ${rarBadge(c.rarity)}</span></div>`).join('');
-    return`<div class="lot-card"><div class="color-bar" style="background:${col.tx}"></div><div class="lot-head"><div class="lot-num-lbl">LOT ${String(i+1).padStart(2,'0')}</div><div class="lot-title-row"><span class="lot-count">${lot.length} cards</span><span class="lot-val" style="${vc}">$${val.toFixed(2)}</span></div>${setSummary?`<div style="font-family:var(--mono);font-size:10px;color:var(--ink3);margin-top:3px">${setSummary}</div>`:''}<div class="value-bar"><div class="value-fill" style="width:${Math.round(val/maxVal*100)}%;background:${col.tx}"></div></div><div class="lot-rarity-bar">${rarBar}</div></div><div class="lot-items">${items}</div></div>`;
+    return`<div class="lot-card"><div class="color-bar" style="background:${col.tx}"></div><div class="lot-head"><div class="lot-num-lbl">LOT ${String(i+1).padStart(2,'0')}</div><div class="lot-title-row"><span class="lot-count">${lot.length} cards</span><span class="lot-val" style="${vc}">$${val.toFixed(2)}</span></div>${setSummary?`<div style="font-family:var(--mono);font-size:10px;color:var(--ink3);margin-top:3px">${setSummary}</div>`:''}<div class="value-bar"><div class="value-fill" style="width:${Math.round(val/maxVal*100)}%;background:${col.tx}"></div></div><div class="lot-rarity-bar">${rarBar}</div>${csBar?`<div class="color-spread">${csBar}</div>`:''}</div><div class="lot-items">${items}</div></div>`;
   }).join('');
 }
 
@@ -851,11 +973,25 @@ function doTab(t){document.querySelectorAll('.tab').forEach((el,i)=>el.classList
 function dl(rows,name){const csv=rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download=name;a.click();}
 function expSingles(){const singles=cards.filter(c=>c.route==='single').sort((a,b)=>b.price-a.price);dl([['TCGplayer ID','Product Line','Set Name','Product Name','Condition','Add to Inventory','TCG Marketplace Price'],...singles.map(c=>[c.tcgId||'','Magic: The Gathering',c.setName||'',c.name,c.condition||'Near Mint','1',c.price.toFixed(2)])],'tcgplayer_singles_import.csv');}
 function expSinglesPull(){const singles=cards.filter(c=>c.route==='single').sort((a,b)=>a.scanIdx-b.scanIdx);dl([['Scan #','Name','Set','Set Code','Card #','Condition','Price'],...singles.map(c=>[c.scanIdx,c.name,c.setName,c.setCode,c.cardNum,c.condition,c.price.toFixed(2)])],'singles_pull_sheet.csv');}
-function expPull(){dl([['Scan #','Name','Card #','Set','Set Code','Rarity','Condition','Lot(s)','Price'],...pullRows.map(r=>[r.card.scanIdx,r.card.name,r.card.cardNum,r.card.setName,r.card.setCode,r.card.rarity,r.card.condition,r.lotNums.map(n=>'Lot '+n).join(' + '),r.card.price>0?r.card.price.toFixed(2):''])],'pull_sheet.csv');}
+function expPull(){
+  const ordered=[...pullRows];
+  if(pullSort==='lot'){
+    ordered.sort((a,b)=>{
+      const la=a.lotNums[0]||999,lb=b.lotNums[0]||999;
+      if(la!==lb)return la-lb;
+      return a.card.scanIdx-b.card.scanIdx;
+    });
+  }
+  dl([['Scan #','Name','Card #','Set','Set Code','Rarity','Condition','Lot(s)','Price'],...ordered.map(r=>[r.card.scanIdx,r.card.name,r.card.cardNum,r.card.setName,r.card.setCode,r.card.rarity,r.card.condition,r.lotNums.map(n=>'Lot '+n).join(' + '),r.card.price>0?r.card.price.toFixed(2):''])],'pull_sheet.csv');
+}
 function expLots(){dl([['Lot','Scan #','Name','Card #','Set','Set Code','Rarity','Condition','Price'],...lots.flatMap((lot,i)=>lot.map(c=>[i+1,c.scanIdx,c.name,c.cardNum,c.setName,c.setCode,c.rarity,c.condition,c.price>0?c.price.toFixed(2):'']))],'tcg_lots.csv');}
 function copySum(){navigator.clipboard.writeText(lots.map((lot,i)=>{const v=lot.reduce((s,c)=>s+c.price,0);return`Lot ${i+1} (${lot.length} cards, $${v.toFixed(2)}): `+lot.map(c=>`#${c.scanIdx} ${c.name}${c.setCode?' ['+c.setCode+']':''}`).join(', ');}).join('\n'));}
 function clearAll(){
-  cards=[];lots=[];pullRows=[];excl=new Set();invSet=new Set();hasInv=false;
+  cards=[];lots=[];pullRows=[];excl=new Set();invSet=new Set();hasInv=false;lotType='standard';
+  ['standard','rare','bulk'].forEach(k=>{
+    const el=document.getElementById('lt-'+k);
+    if(el)el.classList.toggle('active',k==='standard');
+  });
   ['s-cards','s-config','s-lots','s-singles'].forEach(id=>document.getElementById(id).style.display='none');
   document.getElementById('split-banner').style.display='none';document.getElementById('set-filter').style.display='none';document.getElementById('est-preview').style.display='none';
   document.getElementById('lbl-scan').textContent='';document.getElementById('lbl-inv').textContent='';
@@ -882,7 +1018,7 @@ function saveState(){
     const state={
       v:1,savedAt:Date.now(),
       cards,lots,pullRows,
-      excl:[...excl],invSet:[...invSet],hasInv,maxDup,
+      excl:[...excl],invSet:[...invSet],hasInv,maxDup,lotType,pullSort,
       rm:gv('r-m'),rr:gv('r-r'),ru:gv('r-u'),rc:gv('r-c'),rfill:gv('r-fill'),
       vmin:gv('v-min'),vmax:gv('v-max'),nl:gv('nl'),threshold:gv('threshold'),
       tcgEnabled:document.getElementById('tcg-toggle').checked,
@@ -935,6 +1071,14 @@ function restoreState(s){
   cards=s.cards||[];lots=s.lots||[];pullRows=s.pullRows||[];
   excl=new Set(s.excl||[]);invSet=new Set(s.invSet||[]);
   hasInv=!!s.hasInv;maxDup=s.maxDup??1;
+  if(s.pullSort){setPullSort(s.pullSort);}
+  if(s.lotType){
+    lotType=s.lotType;
+    ['standard','rare','bulk'].forEach(k=>{
+      const el=document.getElementById('lt-'+k);
+      if(el)el.classList.toggle('active',k===lotType);
+    });
+  }
   const setVal=(id,v)=>{const el=document.getElementById(id);if(el!=null&&v!=null&&v!=='')el.value=v;};
   setVal('r-m',s.rm);setVal('r-r',s.rr);setVal('r-u',s.ru);setVal('r-c',s.rc);
   setVal('r-fill',s.rfill);setVal('v-min',s.vmin);setVal('v-max',s.vmax);
