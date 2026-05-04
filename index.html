@@ -1,14 +1,6 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Lot Builder — TCGplayer Scan &amp; Identify</title>
-<meta name="description" content="Build bulk card lots from TCGplayer Scan &amp; Identify exports. Scryfall enrichment, set filtering, rarity targeting, singles pull, and single-pass pull sheet.">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;500;700&display=swap" rel="stylesheet">
+
 <style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;500;700&display=swap');
 *{box-sizing:border-box;margin:0;padding:0;}
 :root{
   --ink:#1a1814;--ink2:#6b6760;--ink3:#a8a5a0;
@@ -19,28 +11,12 @@
   --border:rgba(26,24,20,0.12);--border2:rgba(26,24,20,0.22);
   --radius:4px;--radius-lg:8px;
   --mono:'DM Mono',monospace;--display:'Syne',sans-serif;
-  --page-bg:#f5f3ef;
 }
-html{background:var(--page-bg);}
-body{
-  background:var(--page-bg);
-  font-family:var(--display);
-  color:var(--ink);
-  min-height:100vh;
-  padding:0 1rem 4rem;
-}
-.app{padding:2rem 0;max-width:960px;margin:0 auto;}
-
-.site-header{
-  display:flex;align-items:baseline;justify-content:space-between;
-  margin-bottom:2rem;padding-bottom:1.25rem;
-  border-bottom:1px solid var(--border);
-}
-.wordmark{display:flex;align-items:baseline;gap:10px;}
-.wordmark-title{font-size:22px;font-weight:700;letter-spacing:-0.02em;color:var(--ink);}
+body{background:transparent;font-family:var(--display);color:var(--ink);}
+.app{padding:1.5rem 0;max-width:960px;margin:0 auto;}
+.wordmark{display:flex;align-items:baseline;gap:10px;margin-bottom:1.75rem;padding-bottom:1.25rem;border-bottom:1px solid var(--border);}
+.wordmark-title{font-size:20px;font-weight:700;letter-spacing:-0.02em;}
 .wordmark-sub{font-size:12px;color:var(--ink3);font-family:var(--mono);letter-spacing:0.06em;}
-.site-version{font-size:11px;font-family:var(--mono);color:var(--ink3);}
-
 .panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.25rem 1.5rem;margin-bottom:1rem;}
 .step-label{font-size:11px;font-weight:500;letter-spacing:0.08em;color:var(--ink2);text-transform:uppercase;margin-bottom:0.75rem;}
 .upload-zone{border:1.5px dashed var(--border2);border-radius:var(--radius-lg);padding:2rem;text-align:center;cursor:pointer;transition:background 0.15s,border-color 0.15s;}
@@ -54,7 +30,6 @@ body{
 .upload-zone small{font-size:12px;color:var(--ink3);font-family:var(--mono);}
 .upload-zone.has-file p,.upload-zone.has-file small{color:var(--teal-text);}
 .upload-optional{font-size:10px;font-family:var(--mono);color:var(--ink3);text-align:center;margin-top:4px;letter-spacing:0.04em;}
-
 .tcg-toggle-row{display:flex;align-items:center;gap:12px;margin-top:0.85rem;padding-top:0.85rem;border-top:1px solid var(--border);}
 .tcg-toggle-label{font-size:13px;color:var(--ink);font-weight:500;}
 .tcg-toggle-desc{font-size:11px;color:var(--ink3);font-family:var(--mono);}
@@ -71,19 +46,16 @@ input:checked+.slider-t:before{background:var(--surface);transform:translateX(18
 .threshold-row label{font-size:12px;color:var(--ink2);font-family:var(--mono);}
 .threshold-input{background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius);padding:5px 10px;font-family:var(--mono);font-size:13px;color:var(--ink);outline:none;width:80px;}
 .threshold-input:focus{border-color:var(--ink);}
-
 .split-banner{display:none;gap:10px;margin-bottom:1rem;}
 .split-box{flex:1;border-radius:var(--radius-lg);padding:0.85rem 1rem;border:1px solid;}
 .split-box .sb-n{font-family:var(--mono);font-size:24px;font-weight:500;line-height:1;}
 .split-box .sb-l{font-size:11px;font-family:var(--mono);margin-top:3px;}
 .split-box.singles{background:var(--teal-bg);border-color:#9fd4cc;color:var(--teal-text);}
 .split-box.lots-box{background:var(--amber-bg);border-color:#e8c88a;color:var(--amber-text);}
-
 .stats-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:1.25rem;}
 .stat-box{background:var(--surface2);border-radius:var(--radius);padding:0.75rem 1rem;border:1px solid var(--border);}
 .stat-box .n{font-family:var(--mono);font-size:20px;font-weight:500;color:var(--ink);line-height:1;}
 .stat-box .l{font-size:10px;color:var(--ink3);margin-top:4px;letter-spacing:0.04em;text-transform:uppercase;font-family:var(--mono);}
-
 .scroll-table{border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;}
 .scroll-body{max-height:220px;overflow-y:auto;}
 .trow{display:grid;grid-template-columns:38px 1fr 90px 50px 50px 56px 60px;font-size:12px;border-bottom:1px solid var(--border);}
@@ -91,13 +63,11 @@ input:checked+.slider-t:before{background:var(--surface);transform:translateX(18
 .trow:last-child{border-bottom:none;}
 .trow.thead{background:var(--surface2);position:sticky;top:0;font-family:var(--mono);font-size:11px;color:var(--ink3);letter-spacing:0.04em;}
 .trow>span{padding:6px 8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-
 .badge{display:inline-block;font-family:var(--mono);font-size:9px;font-weight:500;padding:1px 5px;border-radius:2px;vertical-align:middle;}
 .b-r{background:#fcebeb;color:#791f1f;}.b-u{background:#eeecf8;color:#3d3589;}.b-c{background:var(--surface3);color:var(--ink2);}.b-m{background:#faeeda;color:#633806;}
 .b-single{background:var(--teal-bg);color:var(--teal-text);}
 .b-lot{background:var(--amber-bg);color:var(--amber-text);}
 .set-pill{display:inline-block;font-family:var(--mono);font-size:10px;padding:1px 6px;border-radius:2px;background:var(--surface3);color:var(--ink2);border:1px solid var(--border);}
-
 .singles-panel{display:none;background:var(--teal-bg);border:1px solid #9fd4cc;border-radius:var(--radius-lg);padding:1.25rem 1.5rem;margin-bottom:1rem;}
 .singles-panel .step-label{color:var(--teal-text);}
 .singles-table{border:1px solid #9fd4cc;border-radius:var(--radius-lg);overflow:hidden;margin-bottom:1rem;}
@@ -106,7 +76,6 @@ input:checked+.slider-t:before{background:var(--surface);transform:translateX(18
 .srow:last-child{border-bottom:none;}
 .srow.thead{background:rgba(45,125,111,0.1);font-family:var(--mono);font-size:11px;color:var(--teal-text);letter-spacing:0.04em;position:sticky;top:0;}
 .srow>span{padding:6px 8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-
 .config-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;}
 .config-section{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1rem;}
 .config-section-title{font-size:11px;font-weight:500;letter-spacing:0.06em;color:var(--ink2);text-transform:uppercase;margin-bottom:0.75rem;font-family:var(--mono);}
@@ -140,17 +109,15 @@ input:checked+.slider-t:before{background:var(--surface);transform:translateX(18
 .btn{padding:8px 18px;border-radius:var(--radius);border:1px solid var(--border2);background:transparent;color:var(--ink);font-size:13px;cursor:pointer;font-family:var(--display);font-weight:500;transition:background 0.12s;}
 .btn:hover{background:var(--surface2);}
 .btn-primary{background:var(--ink);color:var(--surface);border-color:var(--ink);}
-.btn-primary:hover{background:#2e2b27;}
+.btn-primary:hover{background:#333;}
 .btn-sm{padding:5px 12px;font-size:12px;}
 .btn-teal{background:var(--teal);color:white;border-color:var(--teal);}
 .btn-teal:hover{background:#245f54;}
-
 .tab-bar{display:flex;border-bottom:1px solid var(--border);margin-bottom:1.25rem;}
 .tab{padding:9px 18px;font-size:12px;font-family:var(--mono);cursor:pointer;color:var(--ink3);border-bottom:2px solid transparent;margin-bottom:-1px;letter-spacing:0.04em;transition:color 0.12s;}
 .tab.active{color:var(--ink);border-bottom-color:var(--ink);}
 .tab-panel{display:none;}
 .tab-panel.active{display:block;}
-
 .prog-wrap{height:3px;background:var(--surface3);border-radius:2px;margin-bottom:0.6rem;overflow:hidden;}
 .prog-fill{height:100%;background:var(--teal);border-radius:2px;transition:width 0.25s;}
 .prog-label{font-size:11px;font-family:var(--mono);color:var(--ink3);margin-bottom:0.5rem;}
@@ -158,9 +125,8 @@ input:checked+.slider-t:before{background:var(--surface);transform:translateX(18
 .info-dot{width:6px;height:6px;border-radius:50%;background:var(--teal);flex-shrink:0;}
 .action-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:1rem;}
 .done-bar{text-align:center;padding:1rem;background:var(--teal-bg);border:1px solid #b0d9d3;border-radius:var(--radius);color:var(--teal-text);font-size:13px;font-weight:500;display:none;margin-bottom:0.75rem;}
-
 .pull-wrap{border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;}
-.pull-scroll{max-height:600px;overflow-y:auto;}
+.pull-scroll{max-height:560px;overflow-y:auto;}
 .pull-head-row{display:grid;grid-template-columns:44px 1fr 110px;background:var(--surface2);font-family:var(--mono);font-size:11px;color:var(--ink3);letter-spacing:0.04em;position:sticky;top:0;border-bottom:1px solid var(--border);}
 .pull-head-row>span{padding:8px 12px;}
 .pull-card-row{display:grid;grid-template-columns:44px 1fr 110px;border-bottom:1px solid var(--border);border-left:3px solid transparent;transition:background 0.1s;cursor:pointer;min-height:56px;align-items:center;}
@@ -182,7 +148,6 @@ input:checked+.slider-t:before{background:var(--surface);transform:translateX(18
 .pull-scan{font-family:var(--mono);font-size:11px;color:var(--ink3);}
 .pull-set{font-family:var(--mono);font-size:11px;color:var(--ink3);}
 .pull-rar-cell{display:flex;align-items:center;justify-content:flex-end;}
-
 .color-bar{height:3px;width:100%;}
 .lots-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px;}
 .lot-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;}
@@ -200,7 +165,6 @@ input:checked+.slider-t:before{background:var(--surface);transform:translateX(18
 .lot-meta{font-family:var(--mono);font-size:10px;color:var(--ink3);flex-shrink:0;}
 .value-bar{height:4px;border-radius:2px;margin-top:6px;background:var(--surface3);overflow:hidden;}
 .value-fill{height:100%;border-radius:2px;}
-
 .err-bar{font-size:12px;font-family:var(--mono);color:#7a2a2a;padding:8px 12px;background:#fdf0f0;border:1px solid #e8c4c4;border-radius:var(--radius);margin-bottom:0.75rem;display:none;}
 .skip-bar{font-size:12px;font-family:var(--mono);color:var(--ink3);padding:6px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:0.75rem;display:none;}
 .file-lbl{font-size:11px;font-family:var(--mono);color:var(--ink3);margin-top:0.5rem;}
@@ -211,7 +175,6 @@ input:checked+.slider-t:before{background:var(--surface);transform:translateX(18
 .dot-ok{background:var(--teal);}
 .dot-err{background:#c04040;}
 @keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.3;}}
-
 .set-filter{margin-bottom:1.1rem;display:none;}
 .sf-lbl{font-size:11px;font-family:var(--mono);color:var(--ink3);letter-spacing:0.04em;margin-bottom:0.5rem;display:flex;justify-content:space-between;}
 .set-chips{display:flex;flex-wrap:wrap;gap:6px;max-height:110px;overflow-y:auto;padding:2px 0;}
@@ -219,7 +182,6 @@ input:checked+.slider-t:before{background:var(--surface);transform:translateX(18
 .set-chip.excluded{background:var(--surface3);color:var(--ink3);border-color:var(--border);text-decoration:line-through;opacity:0.55;}
 .set-chip.included{background:var(--teal-bg);color:var(--teal-text);border-color:#9fd4cc;}
 .filter-acts{display:flex;gap:6px;margin-top:0.5rem;}
-
 .warn{color:var(--amber-text);background:var(--amber-bg);border:1px solid #e8c88a;border-radius:var(--radius);padding:6px 12px;font-size:11px;font-family:var(--mono);margin-top:0.5rem;display:none;}
 .total-row{display:flex;justify-content:space-between;align-items:center;padding-top:8px;border-top:1px solid var(--border);margin-top:4px;}
 .est-preview{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:0.85rem 1rem;margin-bottom:1rem;display:none;}
@@ -228,19 +190,48 @@ input:checked+.slider-t:before{background:var(--surface);transform:translateX(18
 .est-val{font-family:var(--mono);font-weight:500;color:var(--ink);}
 .est-divider{border:none;border-top:1px solid var(--border);margin:6px 0;}
 
-.site-footer{text-align:center;font-size:11px;font-family:var(--mono);color:var(--ink3);margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--border);}
-</style>
-</head>
-<body>
-<div class="app">
+.resume-banner{display:none;align-items:center;gap:14px;background:var(--purple-bg);border:1px solid #c4bfe6;border-radius:var(--radius-lg);padding:0.85rem 1.1rem;margin-bottom:1rem;}
+.resume-icon{width:34px;height:34px;border-radius:var(--radius);background:white;border:1px solid #c4bfe6;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.resume-icon svg{width:16px;height:16px;stroke:var(--purple-text);fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;}
+.resume-text{flex:1;color:var(--purple-text);min-width:0;}
+.resume-title{font-size:13px;font-weight:600;}
+.resume-detail{font-size:11px;font-family:var(--mono);opacity:0.8;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.resume-acts{display:flex;gap:6px;flex-shrink:0;}
+.btn-purple{background:var(--purple-text);color:white;border-color:var(--purple-text);}
+.btn-purple:hover{background:#2c2868;}
+.save-status{font-family:var(--mono);font-size:10px;color:var(--ink3);letter-spacing:0.04em;margin-left:auto;opacity:0;transition:opacity 0.4s;}
+.save-status.show{opacity:1;}
+.save-status.dim{opacity:0.5;}
 
-<header class="site-header">
-  <div class="wordmark">
-    <span class="wordmark-title">Lot Builder</span>
-    <span class="wordmark-sub">TCGplayer · Scan &amp; Identify</span>
+.btn-max{background:var(--teal-bg);border:1px solid #9fd4cc;color:var(--teal-text);font-family:var(--mono);font-size:11px;letter-spacing:0.04em;}
+.btn-max:hover{background:#c5e8e3;}
+.btn-max.bottleneck{background:var(--amber-bg);border-color:#e8c88a;color:var(--amber-text);}
+.btn-max.bottleneck:hover{background:#f5dfb0;}
+.btn-max strong{font-weight:600;font-size:12px;}
+.bn-tag{font-family:var(--mono);font-size:10px;color:var(--ink3);font-weight:400;margin-left:6px;}
+</style>
+
+<div class="app">
+<h2 style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)">TCGplayer Lot Builder</h2>
+<div class="wordmark">
+  <span class="wordmark-title">Lot Builder</span>
+  <span class="wordmark-sub">TCGplayer · Scan &amp; Identify</span>
+  <span class="save-status" id="save-status">auto-saved</span>
+</div>
+
+<div class="resume-banner" id="resume-banner">
+  <div class="resume-icon">
+    <svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7"/><polyline points="3 4 3 9 8 9"/></svg>
   </div>
-  <span class="site-version">v1.0</span>
-</header>
+  <div class="resume-text">
+    <div class="resume-title">Resume previous session?</div>
+    <div class="resume-detail" id="resume-detail">—</div>
+  </div>
+  <div class="resume-acts">
+    <button class="btn btn-sm btn-purple" onclick="resumeSession()">Resume</button>
+    <button class="btn btn-sm" onclick="discardSession()">Start fresh</button>
+  </div>
+</div>
 
 <div class="panel" id="s-upload">
   <div class="step-label">01 — Import</div>
@@ -288,7 +279,7 @@ input:checked+.slider-t:before{background:var(--surface);transform:translateX(18
     <div class="split-box lots-box"><div class="sb-n" id="sb-lots">0</div><div class="sb-l">Going to lots</div></div>
   </div>
   <div class="stats-grid" id="stats-grid"></div>
-  <div class="scroll-table">
+  <div class="scroll-table" id="card-table">
     <div class="trow thead" id="card-thead"><span>#</span><span>Name</span><span>Set</span><span>Code</span><span>Rar</span><span>Price</span><span>Route</span></div>
     <div class="scroll-body" id="card-rows"></div>
   </div>
@@ -309,6 +300,7 @@ input:checked+.slider-t:before{background:var(--surface);transform:translateX(18
 
 <div class="panel" id="s-config" style="display:none">
   <div class="step-label">03 — Configure lots</div>
+
   <div class="set-filter" id="set-filter">
     <div class="sf-lbl"><span>Set filter</span><span id="filter-sum" style="color:var(--teal-text)"></span></div>
     <div class="set-chips" id="set-chips"></div>
@@ -317,6 +309,7 @@ input:checked+.slider-t:before{background:var(--surface);transform:translateX(18
       <button class="btn btn-sm" onclick="exclAll()">Exclude all</button>
     </div>
   </div>
+
   <div class="dup-row">
     <div class="dup-label">
       Max copies of same card per lot
@@ -330,6 +323,7 @@ input:checked+.slider-t:before{background:var(--surface);transform:translateX(18
       <button class="dup-btn unlimited" id="dup-0" onclick="setDup(0)">Any</button>
     </div>
   </div>
+
   <div class="config-grid">
     <div class="config-section">
       <div class="config-section-title">Rarity targets per lot</div>
@@ -345,9 +339,10 @@ input:checked+.slider-t:before{background:var(--surface);transform:translateX(18
       <div class="config-section-title">Value targets per lot</div>
       <div class="val-row"><label>Min $</label><input class="val-input" type="number" id="v-min" value="0.00" min="0" step="0.05" oninput="updateNote()"></div>
       <div class="val-row"><label>Max $</label><input class="val-input" type="number" id="v-max" value="0.00" min="0" step="0.05" oninput="updateNote()"></div>
-      <div style="font-size:10px;font-family:var(--mono);color:var(--ink3);margin-top:8px;line-height:1.6;">Set both to 0.00 to skip value filtering. Lots outside range are flagged after building.</div>
+      <div style="font-size:10px;font-family:var(--mono);color:var(--ink3);margin-top:8px;line-height:1.6;">Set both to 0.00 to skip value filtering.</div>
     </div>
   </div>
+
   <div id="warn-box" class="warn"></div>
   <div class="est-preview" id="est-preview">
     <div class="est-row"><span class="est-label">Cards in lot pool</span><span class="est-val" id="est-pool">—</span></div>
@@ -359,6 +354,7 @@ input:checked+.slider-t:before{background:var(--surface);transform:translateX(18
   </div>
   <div class="controls-row">
     <div class="cg"><label>Lot count</label><input type="number" id="nl" value="5" min="1" step="1" oninput="updateNote()"></div>
+    <button class="btn btn-sm btn-max" id="max-lots-btn" onclick="useMaxLots()" style="display:none" title="">Use max <strong id="max-lots-n">—</strong></button>
     <button class="btn btn-primary" onclick="build()">Generate lots</button>
     <button class="btn" onclick="clearAll()">Clear</button>
   </div>
@@ -373,7 +369,7 @@ input:checked+.slider-t:before{background:var(--surface);transform:translateX(18
     <div class="tab" onclick="doTab('lots')">Lot breakdown</div>
   </div>
   <div id="tp-pull" class="tab-panel active">
-    <div class="info-row"><span class="info-dot"></span>Flip through your stack — tap each card as you pull it into its lot</div>
+    <div class="info-row"><span class="info-dot"></span>Flip through your stack — tap each card as you pull it</div>
     <div class="action-row">
       <button class="btn btn-sm" onclick="expPull()">Export pull sheet</button>
       <button class="btn btn-sm" onclick="resetChecks()">Reset progress</button>
@@ -394,11 +390,6 @@ input:checked+.slider-t:before{background:var(--surface);transform:translateX(18
     <div class="lots-grid" id="lots-grid"></div>
   </div>
 </div>
-
-<footer class="site-footer">
-  Lot Builder · Scryfall enrichment via api.scryfall.com · All processing happens in your browser
-</footer>
-
 </div>
 
 <script>
@@ -413,12 +404,16 @@ let cards=[],lots=[],pullRows=[],excl=new Set(),invSet=new Set(),hasInv=false,ma
 
 function setDup(n){
   maxDup=n;
-  [0,1,2,3,4].forEach(v=>{const el=document.getElementById('dup-'+v);if(el)el.classList.toggle('active',v===n);});
+  [0,1,2,3,4].forEach(v=>{
+    const el=document.getElementById('dup-'+v);
+    if(el)el.classList.toggle('active',v===n);
+  });
   const desc=document.getElementById('dup-desc');
-  if(n===0)desc.textContent='Unlimited — any number of copies per lot';
+  if(n===0)desc.textContent='No same-name duplicates per lot (cross-set blocked)';
   else if(n===1)desc.textContent='No duplicates — max 1 copy per lot';
-  else desc.textContent='Max '+n+' copies of the same card per lot';
+  else desc.textContent=`Max ${n} copies of the same card per lot`;
   updateNote();
+  scheduleSave();
 }
 
 const tcgToggle=document.getElementById('tcg-toggle');
@@ -483,6 +478,7 @@ fiScan.addEventListener('change',e=>{if(e.target.files[0])goScan(e.target.files[
 
 function goScan(file){
   showErr('');document.getElementById('lbl-scan').textContent='Loading…';
+  document.getElementById('resume-banner').style.display='none';
   const rd=new FileReader();
   rd.onload=async e=>{
     const lines=e.target.result.trim().split('\n').filter(l=>l.trim());
@@ -525,32 +521,29 @@ async function enrich(){
   const BATCH=75,pairs=[...new Map(cards.map(c=>[c.name+'|'+c.cardNum,{name:c.name,collector_number:c.cardNum}])).values()].filter(p=>p.collector_number),nameOnly=[...new Set(cards.filter(c=>!c.cardNum).map(c=>c.name))],rm={};
   for(let i=0;i<pairs.length;i+=BATCH){
     const batch=pairs.slice(i,i+BATCH);
-    try{
-      const resp=await fetch('https://api.scryfall.com/cards/collection',{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify({identifiers:batch})});
-      if(resp.ok){const d=await resp.json();(d.data||[]).forEach(card=>{const sf={setName:card.set_name||'',setCode:(card.set||'').toUpperCase(),tier:1,tcgId:card.tcgplayer_id||null};rm[card.name+'|'+card.collector_number]=sf;rm[card.name.toLowerCase()+'|'+card.collector_number]=sf;});(d.not_found||[]).forEach(id=>{if(id.name)nameOnly.push(id.name);});}
-    }catch{}
-    sfBar('load','Scryfall: exact '+(Math.min(i+BATCH,pairs.length))+'/'+pairs.length+'…');
+    try{const resp=await fetch('https://api.scryfall.com/cards/collection',{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify({identifiers:batch})});
+      if(resp.ok){const d=await resp.json();(d.data||[]).forEach(card=>{const sf={setName:card.set_name||'',setCode:(card.set||'').toUpperCase(),tier:1,tcgId:card.tcgplayer_id||null};rm[card.name+'|'+card.collector_number]=sf;rm[card.name.toLowerCase()+'|'+card.collector_number]=sf;});(d.not_found||[]).forEach(id=>{if(id.name)nameOnly.push(id.name);});}}catch{}
+    sfBar('load',`Scryfall: exact ${Math.min(i+BATCH,pairs.length)}/${pairs.length}…`);
     if(i+BATCH<pairs.length)await delay(100);
   }
   const still=[...new Set(nameOnly)];
   for(let i=0;i<still.length;i+=BATCH){
     const batch=still.slice(i,i+BATCH);
-    try{
-      const resp=await fetch('https://api.scryfall.com/cards/collection',{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify({identifiers:batch.map(n=>({name:n}))})});
-      if(resp.ok){const d=await resp.json();(d.data||[]).forEach(card=>{const sf={setName:card.set_name||'',setCode:(card.set||'').toUpperCase(),tier:2,tcgId:card.tcgplayer_id||null};rm[card.name+'|']=sf;rm[card.name.toLowerCase()+'|']=sf;});}
-    }catch{}
+    try{const resp=await fetch('https://api.scryfall.com/cards/collection',{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify({identifiers:batch.map(n=>({name:n}))})});
+      if(resp.ok){const d=await resp.json();(d.data||[]).forEach(card=>{const sf={setName:card.set_name||'',setCode:(card.set||'').toUpperCase(),tier:2,tcgId:card.tcgplayer_id||null};rm[card.name+'|']=sf;rm[card.name.toLowerCase()+'|']=sf;});}}catch{}
     if(i+BATCH<still.length)await delay(100);
   }
   cards=cards.map(c=>{const sf=rm[c.name+'|'+c.cardNum]||rm[c.name.toLowerCase()+'|'+c.cardNum]||rm[c.name+'|']||rm[c.name.toLowerCase()+'|']||null;return sf?{...c,setName:sf.setName,setCode:sf.setCode,matchTier:sf.tier,tcgId:sf.tcgId}:c;});
   tagCards();
   const t1=cards.filter(c=>c.matchTier===1).length,t2=cards.filter(c=>c.matchTier===2).length,un=cards.filter(c=>c.matchTier===0).length;
-  sfBar('ok','Matched '+(t1+t2)+'/'+cards.length+' — exact: '+t1+', name: '+t2+(un?', unmatched: '+un:''));
+  sfBar('ok',`Matched ${t1+t2}/${cards.length} — exact: ${t1}, name: ${t2}${un?`, unmatched: ${un}`:''}`);
   renderCards();renderSingles();buildSetFilter();updateNote();
+  scheduleSave();
 }
 
 function rarKey(r){const l=(r||'').toLowerCase();if(l.includes('mythic'))return 'm';if(l.includes('rare'))return 'r';if(l.includes('uncommon'))return 'u';return 'c';}
-function rarBadge(r){const k=rarKey(r);const cls={m:'b-m',r:'b-r',u:'b-u',c:'b-c'}[k];return'<span class="badge '+cls+'">'+k.toUpperCase()+'</span>';}
-function rarBadgeMd(r){const k=rarKey(r);const lbl={m:'Mythic',r:'Rare',u:'Uncommon',c:'Common'}[k];return'<span class="badge '+{m:'b-m',r:'b-r',u:'b-u',c:'b-c'}[k]+'" style="font-size:10px;padding:2px 7px">'+lbl+'</span>';}
+function rarBadge(r){const k=rarKey(r);return`<span class="badge ${{m:'b-m',r:'b-r',u:'b-u',c:'b-c'}[k]}">${k.toUpperCase()}</span>`;}
+function rarBadgeMd(r){const k=rarKey(r);const lbl={m:'Mythic',r:'Rare',u:'Uncommon',c:'Common'}[k];return`<span class="badge ${{m:'b-m',r:'b-r',u:'b-u',c:'b-c'}[k]}" style="font-size:10px;padding:2px 7px">${lbl}</span>`;}
 
 function renderCards(){
   const useTCG=tcgToggle.checked;
@@ -559,15 +552,15 @@ function renderCards(){
   document.getElementById('sb-lots').textContent=lotPool.length;
   document.getElementById('split-banner').style.display=(useTCG&&singles.length>0)?'flex':'none';
   const u=[...new Set(cards.map(c=>c.name))],tv=cards.reduce((s,c)=>s+c.price,0),sets=[...new Set(cards.map(c=>c.setCode).filter(Boolean))].length,rares=cards.filter(c=>['m','r'].includes(rarKey(c.rarity))).length;
-  document.getElementById('stats-grid').innerHTML='<div class="stat-box"><div class="n">'+cards.length+'</div><div class="l">Total</div></div><div class="stat-box"><div class="n">'+u.length+'</div><div class="l">Unique</div></div><div class="stat-box"><div class="n">'+(sets||'…')+'</div><div class="l">Sets</div></div><div class="stat-box"><div class="n">'+rares+'</div><div class="l">Rares+</div></div><div class="stat-box"><div class="n">$'+tv.toFixed(2)+'</div><div class="l">Value</div></div>';
+  document.getElementById('stats-grid').innerHTML=`<div class="stat-box"><div class="n">${cards.length}</div><div class="l">Total</div></div><div class="stat-box"><div class="n">${u.length}</div><div class="l">Unique</div></div><div class="stat-box"><div class="n">${sets||'…'}</div><div class="l">Sets</div></div><div class="stat-box"><div class="n">${rares}</div><div class="l">Rares+</div></div><div class="stat-box"><div class="n">$${tv.toFixed(2)}</div><div class="l">Value</div></div>`;
   const showRoute=useTCG;
   const thead=document.getElementById('card-thead');
   thead.className=showRoute?'trow thead':'trow thead no-route';
   thead.innerHTML=showRoute?'<span>#</span><span>Name</span><span>Set</span><span>Code</span><span>Rar</span><span>Price</span><span>Route</span>':'<span>#</span><span>Name</span><span>Set</span><span>Code</span><span>Rar</span><span>Price</span>';
   document.getElementById('card-rows').innerHTML=cards.map(c=>{
     const isSingle=c.route==='single';
-    const routeCell=showRoute?'<span>'+(isSingle?'<span class="badge b-single">single</span>':'<span class="badge b-lot">lot</span>')+'</span>':'';
-    return'<div class="'+(showRoute?'trow':'trow no-route')+'" style="'+(isSingle?'background:rgba(45,125,111,0.04)':'')+'"><span style="font-family:var(--mono);font-size:10px;color:var(--ink3)">'+c.scanIdx+'</span><span title="'+c.name+'">'+c.name+'</span><span style="color:var(--ink2);font-size:11px">'+(c.setName||'—')+'</span><span>'+(c.setCode?'<span class="set-pill">'+c.setCode+'</span>':'<span style="color:var(--ink3);font-size:10px">…</span>')+'</span><span>'+rarBadge(c.rarity)+'</span><span style="font-family:var(--mono);font-size:11px;color:var(--ink3)">'+(c.price>0?'$'+c.price.toFixed(2):'—')+'</span>'+routeCell+'</div>';
+    const routeCell=showRoute?`<span>${isSingle?'<span class="badge b-single">single</span>':'<span class="badge b-lot">lot</span>'}</span>`:'';
+    return`<div class="${showRoute?'trow':'trow no-route'}" style="${isSingle?'background:rgba(45,125,111,0.04)':''}"><span style="font-family:var(--mono);font-size:10px;color:var(--ink3)">${c.scanIdx}</span><span title="${c.name}">${c.name}</span><span style="color:var(--ink2);font-size:11px">${c.setName||'—'}</span><span>${c.setCode?`<span class="set-pill">${c.setCode}</span>`:'<span style="color:var(--ink3);font-size:10px">…</span>'}</span><span>${rarBadge(c.rarity)}</span><span style="font-family:var(--mono);font-size:11px;color:var(--ink3)">${c.price>0?'$'+c.price.toFixed(2):'—'}</span>${routeCell}</div>`;
   }).join('');
 }
 
@@ -579,22 +572,56 @@ function renderSingles(){
   const totalVal=singles.reduce((s,c)=>s+c.price,0);
   if(singles.length===0){document.getElementById('s-singles').style.display='none';return;}
   document.getElementById('s-singles').style.display='block';
-  document.getElementById('singles-desc').textContent=singles.length+' card(s) ≥ $'+thresh.toFixed(2)+' not in your store — total value $'+totalVal.toFixed(2)+'.';
-  document.getElementById('singles-rows').innerHTML=singles.map(c=>'<div class="srow"><span style="font-family:var(--mono);font-size:10px;color:var(--teal-text)">#'+c.scanIdx+'</span><span title="'+c.name+'" style="color:var(--ink)">'+c.name+'</span><span style="font-size:11px;color:var(--teal-text)">'+(c.setName||'—')+'</span><span>'+(c.setCode?'<span class="set-pill" style="background:#c5e8e3;color:var(--teal-text)">'+c.setCode+'</span>':'—')+'</span><span style="font-size:11px;color:var(--teal-text)">'+(c.condition||'—')+'</span><span style="font-family:var(--mono);font-size:11px;font-weight:500;color:var(--teal-text)">$'+c.price.toFixed(2)+'</span></div>').join('');
+  document.getElementById('singles-desc').textContent=`${singles.length} card(s) ≥ $${thresh.toFixed(2)} not in your store — total value $${totalVal.toFixed(2)}.`;
+  document.getElementById('singles-rows').innerHTML=singles.map(c=>`<div class="srow"><span style="font-family:var(--mono);font-size:10px;color:var(--teal-text)">#${c.scanIdx}</span><span title="${c.name}" style="color:var(--ink)">${c.name}</span><span style="font-size:11px;color:var(--teal-text)">${c.setName||'—'}</span><span>${c.setCode?`<span class="set-pill" style="background:#c5e8e3;color:var(--teal-text)">${c.setCode}</span>`:'—'}</span><span style="font-size:11px;color:var(--teal-text)">${c.condition||'—'}</span><span style="font-family:var(--mono);font-size:11px;font-weight:500;color:var(--teal-text)">$${c.price.toFixed(2)}</span></div>`).join('');
 }
 
 function buildSetFilter(){
   const pool=cards.filter(c=>c.route==='lot');
   const counts={};pool.forEach(c=>{const k=c.setCode||'Unknown';if(!counts[k])counts[k]={name:c.setName||'Unknown',count:0};counts[k].count++;});
   excl=new Set();
-  document.getElementById('set-chips').innerHTML=Object.entries(counts).sort((a,b)=>b[1].count-a[1].count).map(([code,d])=>'<div class="set-chip included" id="sc-'+CSS.escape(code)+'" onclick="toggleSet(\''+code+'\')"><span>'+d.name+' <span style="font-size:9px;opacity:0.6">'+code+'</span></span><span style="font-size:10px;opacity:0.7">'+d.count+'</span></div>').join('');
+  document.getElementById('set-chips').innerHTML=Object.entries(counts).sort((a,b)=>b[1].count-a[1].count).map(([code,d])=>`<div class="set-chip included" id="sc-${CSS.escape(code)}" onclick="toggleSet('${code}')"><span>${d.name} <span style="font-size:9px;opacity:0.6">${code}</span></span><span style="font-size:10px;opacity:0.7">${d.count}</span></div>`).join('');
   document.getElementById('set-filter').style.display='block';updateFilterSum();
 }
-function toggleSet(code){const el=document.getElementById('sc-'+CSS.escape(code));if(excl.has(code)){excl.delete(code);el.className='set-chip included';}else{excl.add(code);el.className='set-chip excluded';}updateFilterSum();updateNote();}
-function selAll(){excl.clear();document.querySelectorAll('.set-chip').forEach(el=>el.className='set-chip included');updateFilterSum();updateNote();}
-function exclAll(){document.querySelectorAll('.set-chip').forEach(el=>{excl.add(el.id.replace('sc-',''));el.className='set-chip excluded';});updateFilterSum();updateNote();}
-function updateFilterSum(){const t=document.querySelectorAll('.set-chip').length;document.getElementById('filter-sum').textContent=excl.size===0?'All sets included':(t-excl.size)+' of '+t+' sets';}
+function toggleSet(code){const el=document.getElementById('sc-'+CSS.escape(code));if(excl.has(code)){excl.delete(code);el.className='set-chip included';}else{excl.add(code);el.className='set-chip excluded';}updateFilterSum();updateNote();scheduleSave();}
+function selAll(){excl.clear();document.querySelectorAll('.set-chip').forEach(el=>el.className='set-chip included');updateFilterSum();updateNote();scheduleSave();}
+function exclAll(){document.querySelectorAll('.set-chip').forEach(el=>{excl.add(el.id.replace('sc-',''));el.className='set-chip excluded';});updateFilterSum();updateNote();scheduleSave();}
+function updateFilterSum(){const t=document.querySelectorAll('.set-chip').length;document.getElementById('filter-sum').textContent=excl.size===0?'All sets included':`${t-excl.size} of ${t} sets`;}
 function filtered(){const pool=cards.filter(c=>c.route==='lot');return excl.size===0?pool:pool.filter(c=>!excl.has(c.setCode||'Unknown'));}
+
+// Find the true maximum number of lots we could build given the rarity
+// targets. The bottleneck is whichever tier runs out of supply first —
+// it's never just total_cards / cards_per_lot, because if you target 1
+// mythic per lot and only have 30 mythics in the pool you can't build 60
+// lots even if you have 6000 cards total.
+function computeMaxLots(){
+  if(!cards.length)return{n:0,bottleneck:null};
+  const f=filtered();
+  const rm=parseInt(document.getElementById('r-m').value)||0,
+        rr=parseInt(document.getElementById('r-r').value)||0,
+        ru=parseInt(document.getElementById('r-u').value)||0,
+        rc=parseInt(document.getElementById('r-c').value)||0,
+        rfill=parseInt(document.getElementById('r-fill').value)||0;
+  const cpl=rm+rr+ru+rc+rfill;
+  if(cpl===0)return{n:0,bottleneck:null};
+  const avail={
+    m:f.filter(c=>rarKey(c.rarity)==='m').length,
+    r:f.filter(c=>rarKey(c.rarity)==='r').length,
+    u:f.filter(c=>rarKey(c.rarity)==='u').length,
+    c:f.filter(c=>rarKey(c.rarity)==='c').length,
+  };
+  const limits=[{n:Math.floor(f.length/cpl),why:'pool'}];
+  if(rm>0)limits.push({n:Math.floor(avail.m/rm),why:'mythic'});
+  if(rr>0)limits.push({n:Math.floor(avail.r/rr),why:'rare'});
+  if(ru>0)limits.push({n:Math.floor(avail.u/ru),why:'uncommon'});
+  if(rc>0)limits.push({n:Math.floor(avail.c/rc),why:'common'});
+  const min=limits.reduce((a,b)=>b.n<a.n?b:a);
+  return{n:Math.max(0,min.n),bottleneck:min.why};
+}
+function useMaxLots(){
+  const {n}=computeMaxLots();
+  if(n>0){document.getElementById('nl').value=n;updateNote();scheduleSave();}
+}
 
 function updateNote(){
   if(!cards.length)return;
@@ -605,13 +632,15 @@ function updateNote(){
   document.getElementById('rar-total').textContent=cpl;
   const nl=parseInt(document.getElementById('nl').value)||5;
   const vmin=parseFloat(document.getElementById('v-min').value)||0,vmax=parseFloat(document.getElementById('v-max').value)||0;
-  const poolVal=f.reduce((s,c)=>s+c.price,0),maxLots=cpl>0?Math.floor(f.length/cpl):0,estVpl=maxLots>0?poolVal/maxLots:0;
+  const poolVal=f.reduce((s,c)=>s+c.price,0);
+  const {n:maxLots,bottleneck}=computeMaxLots();
+  const estVpl=maxLots>0?poolVal/maxLots:0;
   const avail={m:f.filter(c=>rarKey(c.rarity)==='m').length,r:f.filter(c=>rarKey(c.rarity)==='r').length,u:f.filter(c=>rarKey(c.rarity)==='u').length,c:f.filter(c=>rarKey(c.rarity)==='c').length};
   const warnings=[];
-  if(rm*nl>avail.m)warnings.push('Need '+(rm*nl)+' mythics, have '+avail.m);
-  if(rr*nl>avail.r)warnings.push('Need '+(rr*nl)+' rares, have '+avail.r);
-  if(ru*nl>avail.u)warnings.push('Need '+(ru*nl)+' uncommons, have '+avail.u);
-  if(rc*nl>avail.c)warnings.push('Need '+(rc*nl)+' commons, have '+avail.c);
+  if(rm*nl>avail.m)warnings.push(`Need ${rm*nl} mythics, have ${avail.m}`);
+  if(rr*nl>avail.r)warnings.push(`Need ${rr*nl} rares, have ${avail.r}`);
+  if(ru*nl>avail.u)warnings.push(`Need ${ru*nl} uncommons, have ${avail.u}`);
+  if(rc*nl>avail.c)warnings.push(`Need ${rc*nl} commons, have ${avail.c}`);
   if(warnings.length){warn.textContent='⚠ '+warnings.join(' · ');warn.style.display='block';}
   if(cpl>0){
     document.getElementById('est-preview').style.display='block';
@@ -619,11 +648,26 @@ function updateNote(){
     document.getElementById('est-total').textContent='$'+poolVal.toFixed(2);
     document.getElementById('est-cpl').textContent=cpl;
     document.getElementById('est-vpl').textContent='~$'+estVpl.toFixed(2);
-    document.getElementById('est-maxlots').textContent=maxLots;
+    const bnTag=(bottleneck&&bottleneck!=='pool')?`<span class="bn-tag">${bottleneck}-bound</span>`:'';
+    document.getElementById('est-maxlots').innerHTML=maxLots+bnTag;
   }
-  const dupLabel=maxDup===0?'unlimited':maxDup===1?'no dupes':'max '+maxDup+' copies';
-  let note=nl+' lot(s) × '+cpl+' cards · '+dupLabel;
-  if(vmin>0||vmax>0)note+=' · value target $'+vmin.toFixed(2)+'–$'+vmax.toFixed(2);
+  // Update the "Use max" button next to the Lot count input.
+  const maxBtn=document.getElementById('max-lots-btn');
+  if(maxBtn){
+    if(cpl>0&&maxLots>0){
+      document.getElementById('max-lots-n').textContent=maxLots;
+      maxBtn.style.display='inline-flex';
+      maxBtn.classList.toggle('bottleneck',bottleneck&&bottleneck!=='pool');
+      maxBtn.title=bottleneck&&bottleneck!=='pool'
+        ?`Set lot count to ${maxLots} (limited by ${bottleneck} supply: ${avail[bottleneck[0]]} available, ${({mythic:rm,rare:rr,uncommon:ru,common:rc})[bottleneck]} per lot)`
+        :`Set lot count to ${maxLots} (limited by total pool size)`;
+    }else{
+      maxBtn.style.display='none';
+    }
+  }
+  const dupLabel=maxDup===0?'no same-name dupes':maxDup===1?'no dupes':`max ${maxDup} same name`;
+  let note=`${nl} lot(s) × ${cpl} cards · ${dupLabel}`;
+  if(vmin>0||vmax>0)note+=` · value target $${vmin.toFixed(2)}–$${vmax.toFixed(2)}`;
   document.getElementById('cfg-note').textContent=note+'.';
 }
 document.getElementById('nl').addEventListener('input',updateNote);
@@ -635,45 +679,101 @@ function build(){
   const cpl=rm+rr+ru+rc+rfill;if(cpl===0){alert('Set at least 1 card per lot.');return;}
   const vmin=parseFloat(document.getElementById('v-min').value)||0,vmax=parseFloat(document.getElementById('v-max').value)||0;
   const useValFilter=vmin>0||vmax>0;
+
   const rarPools={
     m:[...pool.filter(c=>rarKey(c.rarity)==='m')].sort((a,b)=>b.price-a.price),
     r:[...pool.filter(c=>rarKey(c.rarity)==='r')].sort((a,b)=>b.price-a.price),
     u:[...pool.filter(c=>rarKey(c.rarity)==='u')].sort((a,b)=>b.price-a.price),
     c:[...pool.filter(c=>rarKey(c.rarity)==='c')].sort((a,b)=>b.price-a.price)
   };
-  const used=new Set(),lotArrays=Array.from({length:nl},()=>[]),copiesPerLot=Array.from({length:nl},()=>({}));
-  function canAdd(li,name){if(maxDup===0)return true;return(copiesPerLot[li][name]||0)<maxDup;}
-  function doAdd(li,card){used.add(card.scanIdx);lotArrays[li].push(card);copiesPerLot[li][card.name]=(copiesPerLot[li][card.name]||0)+1;}
-  const assignRarity=(rk,target)=>{if(target<=0)return;for(let li=0;li<nl;li++){let filled=0;for(let ci=0;ci<rarPools[rk].length&&filled<target;ci++){const card=rarPools[rk][ci];if(used.has(card.scanIdx))continue;if(!canAdd(li,card.name))continue;doAdd(li,card);filled++;}}};
+  const used=new Set(),lotArrays=Array.from({length:nl},()=>[]);
+  const copiesPerLot=Array.from({length:nl},()=>({}));
+
+  // Normalize names so the same card from different sets always matches:
+  // lowercase, trim, collapse whitespace, and strip the back face of
+  // double-faced cards (e.g. "Delver of Secrets // Insectile Aberration"
+  // -> "delver of secrets") so reprints with differing name formats still
+  // count as duplicates.
+  const nameKey=n=>(n||'').toLowerCase().split('//')[0].trim().replace(/\s+/g,' ');
+  function canAdd(li,name){
+    // Hard rule: a single lot can never contain two cards with the same
+    // name, even if they're from different sets. Same name = duplicate,
+    // regardless of the maxDup setting.
+    const k=nameKey(name);
+    if((copiesPerLot[li][k]||0)>=1)return false;
+    if(maxDup===0)return true;
+    return(copiesPerLot[li][k]||0)<maxDup;
+  }
+  function doAdd(li,card){
+    used.add(card.scanIdx);
+    lotArrays[li].push(card);
+    const k=nameKey(card.name);
+    copiesPerLot[li][k]=(copiesPerLot[li][k]||0)+1;
+  }
+
+  const assignRarity=(rk,target)=>{
+    if(target<=0)return;
+    for(let li=0;li<nl;li++){
+      let filled=0;
+      for(let ci=0;ci<rarPools[rk].length&&filled<target;ci++){
+        const card=rarPools[rk][ci];
+        if(used.has(card.scanIdx))continue;
+        if(!canAdd(li,card.name))continue;
+        doAdd(li,card);filled++;
+      }
+    }
+  };
   ['m','r','u','c'].forEach(rk=>assignRarity(rk,{m:rm,r:rr,u:ru,c:rc}[rk]));
+
   if(rfill>0){
     const remaining=[...pool.filter(c=>!used.has(c.scanIdx))].sort((a,b)=>b.price-a.price);
     let ri=0;
-    for(let pass=0;pass<rfill;pass++){for(let li=0;li<nl;li++){while(ri<remaining.length){const card=remaining[ri++];if(!canAdd(li,card.name))continue;doAdd(li,card);break;}}}
+    for(let pass=0;pass<rfill;pass++){
+      for(let li=0;li<nl;li++){
+        while(ri<remaining.length){
+          const card=remaining[ri++];
+          if(!canAdd(li,card.name))continue;
+          doAdd(li,card);break;
+        }
+      }
+    }
   }
+
   lotArrays.forEach(lot=>lot.sort((a,b)=>a.scanIdx-b.scanIdx));
   lots=lotArrays.filter(l=>l.length>0);
   const sm={};lots.forEach((lot,li)=>lot.forEach(c=>{if(!sm[c.scanIdx])sm[c.scanIdx]={card:c,lotNums:[]};sm[c.scanIdx].lotNums.push(li+1);}));
   pullRows=Object.values(sm).sort((a,b)=>a.card.scanIdx-b.card.scanIdx);
   const skipped=pool.filter(c=>!used.has(c.scanIdx)).length;
-  const sk=document.getElementById('skip-bar');sk.textContent=skipped?skipped+' card(s) not assigned — increase lot count or fill slots.':'';sk.style.display=skipped?'block':'none';
+  const sk=document.getElementById('skip-bar');sk.textContent=skipped?`${skipped} card(s) not assigned.`:'';sk.style.display=skipped?'block':'none';
   renderPull();renderLots(useValFilter,vmin,vmax);
   document.getElementById('s-lots').style.display='block';
   document.getElementById('s-lots').scrollIntoView({behavior:'smooth',block:'start'});
   doTab('pull');
+  scheduleSave();
 }
 
 function renderPull(){
   document.getElementById('pull-body').innerHTML=pullRows.map((row,i)=>{
     const c=row.card,firstLot=row.lotNums[0],borderColor=lc(firstLot-1).tx;
-    const chips=row.lotNums.map(n=>{const col=lc(n-1);return'<span class="lot-pill" style="background:'+col.bg+';color:'+col.tx+'">Lot '+n+'</span>';}).join('');
-    return'<div class="pull-card-row" id="pr-'+i+'" style="border-left-color:'+borderColor+'" onclick="tog('+i+')">'+'<div class="pull-check-cell"><button class="check-btn" id="cb-'+i+'" onclick="event.stopPropagation();tog('+i+')"></button></div>'+'<div class="pull-main-cell"><div class="pull-name-row"><span class="pull-name">'+c.name+'</span>'+chips+'</div><div class="pull-meta-row"><span class="pull-scan">#'+c.scanIdx+'</span><span class="pull-set">'+(c.setCode||c.setName||'—')+'</span><span style="font-family:var(--mono);font-size:11px;color:var(--ink3)">'+(c.price>0?'$'+c.price.toFixed(2):'—')+'</span></div></div>'+'<div class="pull-rar-cell">'+rarBadgeMd(c.rarity)+'</div></div>';
+    const chips=row.lotNums.map(n=>{const col=lc(n-1);return`<span class="lot-pill" style="background:${col.bg};color:${col.tx}">Lot ${n}</span>`;}).join('');
+    return`<div class="pull-card-row" id="pr-${i}" style="border-left-color:${borderColor}" onclick="tog(${i})">
+      <div class="pull-check-cell"><button class="check-btn" id="cb-${i}" onclick="event.stopPropagation();tog(${i})"></button></div>
+      <div class="pull-main-cell">
+        <div class="pull-name-row"><span class="pull-name">${c.name}</span>${chips}</div>
+        <div class="pull-meta-row">
+          <span class="pull-scan">#${c.scanIdx}</span>
+          <span class="pull-set">${c.setCode||c.setName||'—'}</span>
+          <span style="font-family:var(--mono);font-size:11px;color:var(--ink3)">${c.price>0?'$'+c.price.toFixed(2):'—'}</span>
+        </div>
+      </div>
+      <div class="pull-rar-cell">${rarBadgeMd(c.rarity)}</div>
+    </div>`;
   }).join('');
   updateProg();
 }
-function tog(i){const row=document.getElementById('pr-'+i),btn=document.getElementById('cb-'+i);btn.classList.toggle('checked');row.classList.toggle('done',btn.classList.contains('checked'));updateProg();}
-function updateProg(){const total=pullRows.length,done=document.querySelectorAll('.check-btn.checked').length;document.getElementById('prog-lbl').textContent=done+' of '+total+' pulled';document.getElementById('prog-fill').style.width=total?Math.round(done/total*100)+'%':'0%';document.getElementById('done-bar').style.display=(done>0&&done===total)?'block':'none';}
-function resetChecks(){document.querySelectorAll('.check-btn').forEach(b=>b.classList.remove('checked'));document.querySelectorAll('.pull-card-row').forEach(r=>r.classList.remove('done'));updateProg();}
+function tog(i){const row=document.getElementById('pr-'+i),btn=document.getElementById('cb-'+i);btn.classList.toggle('checked');row.classList.toggle('done',btn.classList.contains('checked'));updateProg();scheduleSave();}
+function updateProg(){const total=pullRows.length,done=document.querySelectorAll('.check-btn.checked').length;document.getElementById('prog-lbl').textContent=`${done} of ${total} pulled`;document.getElementById('prog-fill').style.width=total?Math.round(done/total*100)+'%':'0%';document.getElementById('done-bar').style.display=(done>0&&done===total)?'block':'none';}
+function resetChecks(){document.querySelectorAll('.check-btn').forEach(b=>b.classList.remove('checked'));document.querySelectorAll('.pull-card-row').forEach(r=>r.classList.remove('done'));updateProg();scheduleSave();}
 
 function renderLots(useValFilter,vmin,vmax){
   const maxVal=Math.max(...lots.map(l=>l.reduce((s,c)=>s+c.price,0)),0.01);
@@ -682,19 +782,19 @@ function renderLots(useValFilter,vmin,vmax){
     const vc=useValFilter?(vmin>0&&val<vmin?'color:#633806':vmax>0&&val>vmax?'color:#791f1f':'color:var(--teal-text)'):'color:var(--ink2)';
     const rarCounts={m:0,r:0,u:0,c:0};lot.forEach(c=>rarCounts[rarKey(c.rarity)]++);
     const setSummary=[...new Set(lot.map(c=>c.setCode).filter(Boolean))].slice(0,3).join(' · ');
-    const rarBar=['m','r','u','c'].filter(k=>rarCounts[k]>0).map(k=>'<span class="badge '+{m:'b-m',r:'b-r',u:'b-u',c:'b-c'}[k]+'">'+rarCounts[k]+k.toUpperCase()+'</span>').join('');
-    const items=lot.map(c=>'<div class="lot-item"><span class="lot-idx">#'+c.scanIdx+'</span><span class="lot-name" title="'+c.name+'">'+c.name+'</span><span class="lot-meta">'+(c.setCode||'')+' '+rarBadge(c.rarity)+'</span></div>').join('');
-    return'<div class="lot-card"><div class="color-bar" style="background:'+col.tx+'"></div><div class="lot-head"><div class="lot-num-lbl">LOT '+String(i+1).padStart(2,'0')+'</div><div class="lot-title-row"><span class="lot-count">'+lot.length+' cards</span><span class="lot-val" style="'+vc+'">$'+val.toFixed(2)+'</span></div>'+(setSummary?'<div style="font-family:var(--mono);font-size:10px;color:var(--ink3);margin-top:3px">'+setSummary+'</div>':'')+'<div class="value-bar"><div class="value-fill" style="width:'+Math.round(val/maxVal*100)+'%;background:'+col.tx+'"></div></div><div class="lot-rarity-bar">'+rarBar+'</div></div><div class="lot-items">'+items+'</div></div>';
+    const rarBar=(['m','r','u','c']).filter(k=>rarCounts[k]>0).map(k=>`<span class="badge ${{m:'b-m',r:'b-r',u:'b-u',c:'b-c'}[k]}">${rarCounts[k]}${k.toUpperCase()}</span>`).join('');
+    const items=lot.map(c=>`<div class="lot-item"><span class="lot-idx">#${c.scanIdx}</span><span class="lot-name" title="${c.name}">${c.name}</span><span class="lot-meta">${c.setCode||''} ${rarBadge(c.rarity)}</span></div>`).join('');
+    return`<div class="lot-card"><div class="color-bar" style="background:${col.tx}"></div><div class="lot-head"><div class="lot-num-lbl">LOT ${String(i+1).padStart(2,'0')}</div><div class="lot-title-row"><span class="lot-count">${lot.length} cards</span><span class="lot-val" style="${vc}">$${val.toFixed(2)}</span></div>${setSummary?`<div style="font-family:var(--mono);font-size:10px;color:var(--ink3);margin-top:3px">${setSummary}</div>`:''}<div class="value-bar"><div class="value-fill" style="width:${Math.round(val/maxVal*100)}%;background:${col.tx}"></div></div><div class="lot-rarity-bar">${rarBar}</div></div><div class="lot-items">${items}</div></div>`;
   }).join('');
 }
 
 function doTab(t){document.querySelectorAll('.tab').forEach((el,i)=>el.classList.toggle('active',['pull','lots'][i]===t));document.getElementById('tp-pull').classList.toggle('active',t==='pull');document.getElementById('tp-lots').classList.toggle('active',t==='lots');}
-function dl(rows,name){const csv=rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download=name;a.click();}
+function dl(rows,name){const csv=rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download=name;a.click();}
 function expSingles(){const singles=cards.filter(c=>c.route==='single').sort((a,b)=>b.price-a.price);dl([['TCGplayer ID','Product Line','Set Name','Product Name','Condition','Add to Inventory','TCG Marketplace Price'],...singles.map(c=>[c.tcgId||'','Magic: The Gathering',c.setName||'',c.name,c.condition||'Near Mint','1',c.price.toFixed(2)])],'tcgplayer_singles_import.csv');}
 function expSinglesPull(){const singles=cards.filter(c=>c.route==='single').sort((a,b)=>a.scanIdx-b.scanIdx);dl([['Scan #','Name','Set','Set Code','Card #','Condition','Price'],...singles.map(c=>[c.scanIdx,c.name,c.setName,c.setCode,c.cardNum,c.condition,c.price.toFixed(2)])],'singles_pull_sheet.csv');}
 function expPull(){dl([['Scan #','Name','Card #','Set','Set Code','Rarity','Condition','Lot(s)','Price'],...pullRows.map(r=>[r.card.scanIdx,r.card.name,r.card.cardNum,r.card.setName,r.card.setCode,r.card.rarity,r.card.condition,r.lotNums.map(n=>'Lot '+n).join(' + '),r.card.price>0?r.card.price.toFixed(2):''])],'pull_sheet.csv');}
 function expLots(){dl([['Lot','Scan #','Name','Card #','Set','Set Code','Rarity','Condition','Price'],...lots.flatMap((lot,i)=>lot.map(c=>[i+1,c.scanIdx,c.name,c.cardNum,c.setName,c.setCode,c.rarity,c.condition,c.price>0?c.price.toFixed(2):'']))],'tcg_lots.csv');}
-function copySum(){navigator.clipboard.writeText(lots.map((lot,i)=>{const v=lot.reduce((s,c)=>s+c.price,0);return'Lot '+(i+1)+' ('+lot.length+' cards, $'+v.toFixed(2)+'): '+lot.map(c=>'#'+c.scanIdx+' '+c.name+(c.setCode?' ['+c.setCode+']':'')).join(', ');}).join('\n'));}
+function copySum(){navigator.clipboard.writeText(lots.map((lot,i)=>{const v=lot.reduce((s,c)=>s+c.price,0);return`Lot ${i+1} (${lot.length} cards, $${v.toFixed(2)}): `+lot.map(c=>`#${c.scanIdx} ${c.name}${c.setCode?' ['+c.setCode+']':''}`).join(', ');}).join('\n'));}
 function clearAll(){
   cards=[];lots=[];pullRows=[];excl=new Set();invSet=new Set();hasInv=false;
   ['s-cards','s-config','s-lots','s-singles'].forEach(id=>document.getElementById(id).style.display='none');
@@ -703,7 +803,151 @@ function clearAll(){
   document.getElementById('dz-scan').className='upload-zone';document.getElementById('dz-inv').className='upload-zone';
   document.getElementById('fi-scan').value='';document.getElementById('fi-inv').value='';
   tcgToggle.checked=false;tcgSection.classList.remove('visible');showErr('');
+  document.getElementById('resume-banner').style.display='none';
+  clearState();
+  const ss=document.getElementById('save-status');if(ss){ss.classList.remove('show','dim');}
 }
+
+// ============ Session persistence (localStorage) ============
+const SK='lotmaker_session_v1';
+let saveT=null,flashT=null;
+
+function scheduleSave(){clearTimeout(saveT);saveT=setTimeout(saveState,600);}
+
+function saveState(){
+  if(!cards.length){return;}
+  try{
+    const checked=[];
+    document.querySelectorAll('.check-btn').forEach((b,i)=>{if(b.classList.contains('checked'))checked.push(i);});
+    const gv=id=>{const el=document.getElementById(id);return el?el.value:'';};
+    const state={
+      v:1,savedAt:Date.now(),
+      cards,lots,pullRows,
+      excl:[...excl],invSet:[...invSet],hasInv,maxDup,
+      rm:gv('r-m'),rr:gv('r-r'),ru:gv('r-u'),rc:gv('r-c'),rfill:gv('r-fill'),
+      vmin:gv('v-min'),vmax:gv('v-max'),nl:gv('nl'),threshold:gv('threshold'),
+      tcgEnabled:document.getElementById('tcg-toggle').checked,
+      panels:{
+        cards:document.getElementById('s-cards').style.display!=='none',
+        singles:document.getElementById('s-singles').style.display!=='none',
+        config:document.getElementById('s-config').style.display!=='none',
+        lots:document.getElementById('s-lots').style.display!=='none',
+      },
+      scanLabel:document.getElementById('lbl-scan').textContent,
+      invLabel:document.getElementById('lbl-inv').textContent,
+      pulled:checked,
+      activeTab:document.getElementById('tp-pull').classList.contains('active')?'pull':'lots',
+    };
+    localStorage.setItem(SK,JSON.stringify(state));
+    flashSaved('saved');
+  }catch(e){console.warn('LotBuilder save failed:',e);}
+}
+
+function loadState(){
+  try{
+    const raw=localStorage.getItem(SK);
+    if(!raw)return null;
+    const s=JSON.parse(raw);
+    if(s.v!==1||!Array.isArray(s.cards)||!s.cards.length)return null;
+    return s;
+  }catch(e){return null;}
+}
+
+function clearState(){try{localStorage.removeItem(SK);}catch(e){}}
+
+function fmtAgo(ts){
+  const s=Math.round((Date.now()-ts)/1000);
+  if(s<60)return s+'s ago';
+  if(s<3600)return Math.round(s/60)+'m ago';
+  if(s<86400)return Math.round(s/3600)+'h ago';
+  return Math.round(s/86400)+'d ago';
+}
+
+function flashSaved(kind){
+  const el=document.getElementById('save-status');
+  if(!el)return;
+  el.textContent=kind==='restored'?'session restored':'saved just now';
+  el.classList.remove('dim');el.classList.add('show');
+  clearTimeout(flashT);
+  flashT=setTimeout(()=>{el.classList.remove('show');el.classList.add('dim');el.textContent='auto-saving';},1800);
+}
+
+function restoreState(s){
+  cards=s.cards||[];lots=s.lots||[];pullRows=s.pullRows||[];
+  excl=new Set(s.excl||[]);invSet=new Set(s.invSet||[]);
+  hasInv=!!s.hasInv;maxDup=s.maxDup??1;
+  const setVal=(id,v)=>{const el=document.getElementById(id);if(el!=null&&v!=null&&v!=='')el.value=v;};
+  setVal('r-m',s.rm);setVal('r-r',s.rr);setVal('r-u',s.ru);setVal('r-c',s.rc);
+  setVal('r-fill',s.rfill);setVal('v-min',s.vmin);setVal('v-max',s.vmax);
+  setVal('nl',s.nl);setVal('threshold',s.threshold);
+  const tt=document.getElementById('tcg-toggle');
+  tt.checked=!!s.tcgEnabled;
+  document.getElementById('tcg-section').classList.toggle('visible',!!s.tcgEnabled);
+  if(s.scanLabel){
+    document.getElementById('lbl-scan').textContent=s.scanLabel;
+    document.getElementById('dz-scan').className='upload-zone has-file';
+  }
+  if(s.invLabel){
+    document.getElementById('lbl-inv').textContent=s.invLabel;
+    document.getElementById('dz-inv').className='upload-zone has-file';
+  }
+  setDup(maxDup);
+  if(s.panels){
+    if(s.panels.cards){document.getElementById('s-cards').style.display='block';renderCards();renderSingles();buildSetFilter();}
+    if(s.panels.config)document.getElementById('s-config').style.display='block';
+    if(s.panels.singles)document.getElementById('s-singles').style.display='block';
+    if(s.panels.lots&&lots.length){
+      document.getElementById('s-lots').style.display='block';
+      renderPull();
+      const vmin=parseFloat(s.vmin)||0,vmax=parseFloat(s.vmax)||0;
+      renderLots(vmin>0||vmax>0,vmin,vmax);
+      doTab(s.activeTab||'pull');
+      if(s.pulled&&s.pulled.length){
+        s.pulled.forEach(i=>{
+          const btn=document.getElementById('cb-'+i);
+          const row=document.getElementById('pr-'+i);
+          if(btn)btn.classList.add('checked');
+          if(row)row.classList.add('done');
+        });
+        updateProg();
+      }
+    }
+  }
+  updateNote();
+  flashSaved('restored');
+}
+
+function resumeSession(){
+  const s=loadState();if(!s)return;
+  document.getElementById('resume-banner').style.display='none';
+  restoreState(s);
+}
+function discardSession(){
+  if(!confirm('Discard saved session? Pull progress and generated lots will be lost.'))return;
+  clearState();
+  document.getElementById('resume-banner').style.display='none';
+}
+
+// On page load, look for a saved session and offer to resume.
+window.addEventListener('DOMContentLoaded',()=>{
+  const s=loadState();
+  if(!s)return;
+  const pulled=(s.pulled||[]).length,total=(s.pullRows||[]).length;
+  const parts=[`${s.cards.length} cards`];
+  if((s.lots||[]).length)parts.push(`${s.lots.length} lots`);
+  if(total)parts.push(`${pulled}/${total} pulled`);
+  parts.push('saved '+fmtAgo(s.savedAt));
+  document.getElementById('resume-detail').textContent=parts.join(' · ');
+  document.getElementById('resume-banner').style.display='flex';
+});
+
+// Save when the page is being closed or hidden, just in case.
+window.addEventListener('beforeunload',()=>{if(cards.length)saveState();});
+document.addEventListener('visibilitychange',()=>{if(document.hidden&&cards.length)saveState();});
+
+// Save on any settings input change.
+document.addEventListener('input',e=>{
+  if(!cards.length)return;
+  if(['r-m','r-r','r-u','r-c','r-fill','v-min','v-max','nl','threshold'].includes(e.target.id))scheduleSave();
+});
 </script>
-</body>
-</html>
