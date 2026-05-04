@@ -768,15 +768,20 @@ function build(){
   ['m','r','u','c'].forEach(rk=>assignRarity(rk,{m:rm,r:rr,u:ru,c:rc}[rk]));
 
   if(rfill>0){
-    const remaining=[...pool.filter(c=>!used.has(c.scanIdx))].sort((a,b)=>b.price-a.price);
-    let ri=0;
-    for(let pass=0;pass<rfill;pass++){
-      for(let li=0;li<nl;li++){
-        while(ri<remaining.length){
-          const card=remaining[ri++];
-          if(!canAdd(li,card.name))continue;
-          doAdd(li,card);break;
-        }
+    // For each lot, scan the whole remaining pool looking for a card
+    // that fits. Cards skipped due to dedup remain available for other
+    // lots — the previous version used a forward-only cursor that
+    // permanently discarded any card that failed canAdd, which left
+    // later lots short when popular reprints clustered at the top of
+    // the queue.
+    const remainingSorted=[...pool].sort((a,b)=>b.price-a.price);
+    for(let li=0;li<nl;li++){
+      let filled=0;
+      for(let ci=0;ci<remainingSorted.length&&filled<rfill;ci++){
+        const card=remainingSorted[ci];
+        if(used.has(card.scanIdx))continue;
+        if(!canAdd(li,card.name))continue;
+        doAdd(li,card);filled++;
       }
     }
   }
