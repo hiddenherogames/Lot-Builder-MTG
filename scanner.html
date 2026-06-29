@@ -68,6 +68,8 @@
     display:flex; align-items:center; justify-content:center; gap:9px;}
   .btn-scan:disabled{opacity:.45;}
   .btn-flip{flex:none; width:54px; background:var(--navy-2); color:var(--ink); border:1px solid var(--line); font-size:20px;}
+  .btn-auto{flex:none; padding:0 16px; background:var(--navy-2); color:var(--ink); border:1px solid var(--line); font-size:14px; font-weight:800;}
+  .btn-auto.on{background:var(--cyan); color:#04222a; border-color:var(--cyan);}
 
   .prog{margin-top:10px; height:6px; background:var(--navy-2); border-radius:6px; overflow:hidden; display:none;}
   .prog.show{display:block;}
@@ -193,6 +195,7 @@
 
   <div class="scanrow">
     <button class="btn-scan" id="scanBtn" onclick="onScan()">📷 Start camera</button>
+    <button class="btn-auto hidden" id="autoBtn" onclick="toggleAuto()" title="Auto-scan">Auto</button>
     <button class="btn-flip hidden" id="flipBtn" onclick="flipCamera()" title="Switch camera">⟳</button>
   </div>
 
@@ -390,10 +393,20 @@ async function onScan(){
 }
 async function startCamera(){
   try{
-    stream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:{ ideal:facing }, width:{ideal:1920}, height:{ideal:1080} }, audio:false });
+    stream = await navigator.mediaDevices.getUserMedia({
+      video:{ facingMode:{ ideal:facing }, width:{ideal:3840}, height:{ideal:2160} }, audio:false });
     const v=document.getElementById('video'); v.srcObject=stream; await v.play();
+    // push continuous autofocus where the device supports it
+    try{
+      const track=stream.getVideoTracks()[0];
+      const caps=track.getCapabilities ? track.getCapabilities() : {};
+      const adv=[];
+      if(caps.focusMode && caps.focusMode.includes('continuous')) adv.push({ focusMode:'continuous' });
+      if(adv.length) await track.applyConstraints({ advanced:adv });
+    }catch(_){}
     document.getElementById('camMsg').classList.add('hidden');
     document.getElementById('flipBtn').classList.remove('hidden');
+    document.getElementById('autoBtn').classList.remove('hidden');
     document.getElementById('scanBtn').innerHTML='📷 Scan card';
   }catch(e){
     document.getElementById('camMsg').innerHTML =
@@ -404,6 +417,8 @@ async function startCamera(){
   }
 }
 function stopCamera(){
+  autoOn=false; clearTimeout(autoTimer);
+  const ab=document.getElementById('autoBtn'); if(ab){ ab.classList.remove('on'); ab.textContent='Auto'; ab.classList.add('hidden'); }
   if(stream){ stream.getTracks().forEach(t=>t.stop()); stream=null; }
   const b=document.getElementById('scanBtn'); if(b) b.innerHTML='📷 Start camera';
   const f=document.getElementById('flipBtn'); if(f) f.classList.add('hidden');
@@ -466,11 +481,15 @@ async function getWorker(){
   });
   return worker;
 }
+let ocrLock=Promise.resolve();
 async function ocr(canvas, psm){
-  const w=await getWorker();
-  await w.setParameters({ tessedit_pageseg_mode:String(psm) });
-  const { data } = await w.recognize(canvas);
-  return data.text||'';
+  const run=async()=>{
+    const w=await getWorker();
+    await w.setParameters({ tessedit_pageseg_mode:String(psm) });
+    const { data } = await w.recognize(canvas);
+    return data.text||'';
+  };
+  const p=ocrLock.then(run, run); ocrLock=p.catch(()=>{}); return p;
 }
 function setProg(p, txt){
   const w=document.getElementById('prog'), b=document.getElementById('progBar'), t=document.getElementById('progTxt');
@@ -479,29 +498,90 @@ function setProg(p, txt){
 function clearProg(){ document.getElementById('prog').classList.remove('show');
   document.getElementById('progBar').style.width='0%'; document.getElementById('progTxt').textContent=''; }
 
+function cloneCanvas(src){
+  const c=document.createElement('canvas'); c.width=src.width; c.height=src.height;
+  c.getContext('2d').drawImage(src,0,0); return c;
+}
+function grayContrast(c){
+  const ctx=c.getContext('2d'), w=c.width, h=c.height;
+  const img=ctx.getImageData(0,0,w,h), d=img.data, k=1.6;
+  for(let i=0;i<d.length;i+=4){ let g=0.3*d[i]+0.59*d[i+1]+0.11*d[i+2]; g=(g-128)*k+128; g=g<0?0:g>255?255:g; d[i]=d[i+1]=d[i+2]=g; }
+  ctx.putImageData(img,0,0); return c;
+}
+// one fast read — used by the auto loop
+async function quickCandidates(g){
+  const strip=cropRegion(g, 0.05, 0.035, 0.84, 0.11, 1100);
+  const t=cleanLine(await ocr(preprocess(strip), 7));
+  return t.length>=3 ? [t] : [];
+}
+// several reads + fallback — used by manual tap
+async function deepCandidates(g){
+  const out=[];
+  const base=cropRegion(g, 0.05, 0.035, 0.84, 0.11, 1100);
+  const a=cleanLine(await ocr(preprocess(cloneCanvas(base)), 7)); if(a.length>=3) out.push(a);
+  const b=cleanLine(await ocr(grayContrast(cloneCanvas(base)), 7)); if(b.length>=3 && !out.includes(b)) out.push(b);
+  if(!out.length){
+    const full=cropRegion(g, 0, 0, 1, 1, 1200);
+    topLines(await ocr(preprocess(full), 6), 3).forEach(l=>{ if(!out.includes(l)) out.push(l); });
+  }
+  return out;
+}
+
 async function captureAndRead(){
   const btn=document.getElementById('scanBtn'); btn.disabled=true;
   try{
     const g=mapGuideToVideo();
     if(!g){ clearProg(); showVerdict({status:'unknown', query:''}); return; }
-    setProg(0.05,'Loading reader…');
-    // 1) name strip from the top of the card frame
-    const nameImg=cropRegion(g, 0.05, 0.045, 0.82, 0.09, 1000); preprocess(nameImg);
-    let raw=cleanLine(await ocr(nameImg, 7));
-    let candidates = raw.length>=3 ? [raw] : [];
-    // 2) fallback: read the whole card and grab the top text lines
-    if(!candidates.length){
-      setProg(0.55,'Reading full card…');
-      const full=cropRegion(g, 0, 0, 1, 1, 1200); preprocess(full);
-      candidates = topLines(await ocr(full, 6), 3);
-    }
+    setProg(0.1,'Reading card…');
+    const cands=await deepCandidates(g);
     clearProg();
-    if(!candidates.length){ showVerdict({status:'unknown', query:''}); return; }
-    await resolveAndShow(candidates);
+    if(!cands.length){ showVerdict({status:'unknown', query:''}); return; }
+    await resolveAndShow(cands);
   }catch(e){
     clearProg();
     showVerdict({status:'unknown', query:'', noOCR:e.message==='no-ocr'});
   }finally{ btn.disabled=false; }
+}
+
+/* ---------- auto-scan ---------- */
+let autoOn=false, autoTimer=null, autoBusy=false, lastHit={name:'', t:0};
+function toggleAuto(){
+  autoOn=!autoOn;
+  const b=document.getElementById('autoBtn');
+  b.classList.toggle('on', autoOn); b.textContent = autoOn ? 'Auto ●' : 'Auto';
+  if(autoOn){ if(!stream){ startCamera().then(loopAuto); } else loopAuto(); }
+  else { clearTimeout(autoTimer); }
+}
+function localBest(name){
+  const lot=curLot(); let best=null, s=0;
+  for(const k in lot.cards){ const x=similarity(name, lot.cards[k].name); if(x>s){ s=x; best=lot.cards[k]; } }
+  return { best, score:s };
+}
+async function loopAuto(){
+  if(!autoOn || !stream) return;
+  if(!autoBusy){
+    autoBusy=true;
+    try{
+      const g=mapGuideToVideo();
+      if(g){
+        const cands=await quickCandidates(g);
+        if(cands.length){
+          const res=await resolveCandidates(cands);
+          if(res){
+            const lb=localBest(res.name);
+            const confident=(curLot().game==='mtg' && res.hit) || lb.score>=0.78;
+            const fresh=res.name!==lastHit.name || (Date.now()-lastHit.t>4000);
+            if(confident && fresh){
+              lastHit={name:res.name, t:Date.now()};
+              matchAndShow(res.name, res.raw, res.corrected, true);
+            }
+          }
+        }
+      }
+    }catch(e){}
+    autoBusy=false;
+  }
+  autoTimer=setTimeout(loopAuto, 1800);
 }
 
 /* ---------- the core check ---------- */
@@ -525,16 +605,22 @@ async function scryfall(q){
   return null;
 }
 
-// from OCR candidates -> resolve (MTG via Scryfall) -> match + verdict
-async function resolveAndShow(candidates){
+// from OCR candidates -> resolve (MTG via Scryfall). Returns {name,raw,corrected,hit} or null
+async function resolveCandidates(candidates){
+  if(!candidates || !candidates.length) return null;
   const lot=curLot();
-  let name=candidates[0], raw=candidates[0], corrected=false;
+  let name=candidates[0], raw=candidates[0], corrected=false, hit=(lot.game!=='mtg');
   if(lot.game==='mtg'){
-    setProg(1,'Checking name…');
-    for(const c of candidates){ const r=await scryfall(c); if(r){ name=r; raw=c; corrected=normalize(r)!==normalize(c); break; } }
-    clearProg();
+    for(const c of candidates){ const r=await scryfall(c); if(r){ name=r; raw=c; corrected=normalize(r)!==normalize(c); hit=true; break; } }
   }
-  matchAndShow(name, raw, corrected, true);
+  return { name, raw, corrected, hit };
+}
+async function resolveAndShow(candidates){
+  setProg(1,'Checking name…');
+  const res=await resolveCandidates(candidates);
+  clearProg();
+  if(!res){ showVerdict({status:'unknown', query:''}); return; }
+  matchAndShow(res.name, res.raw, res.corrected, true);
 }
 // from a typed/known name -> resolve -> match + verdict
 async function runCheck(input){
