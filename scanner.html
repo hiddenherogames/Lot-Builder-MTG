@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0A1B33">
+<title>The Loot Mill — Lot Scanner</title>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<style>
+  :root{
+    --navy:#0A1B33;
+    --navy-2:#12294A;
+    --navy-3:#1B3A66;
+    --gold:#F5B533;
+    --gold-dim:#C99123;
+    --cyan:#25D0E0;
+    --cyan-dim:#178b97;
+    --green:#34D17A;
+    --red:#FF5A5A;
+    --amber:#F5B533;
+    --ink:#EAF1FB;
+    --ink-dim:#8FA6C4;
+    --line:#23416e;
+    --pad: env(safe-area-inset-bottom, 0px);
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0; padding:0; background:var(--navy); color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+    overscroll-behavior:none;}
+  body{padding-bottom: calc(74px + var(--pad));}
+  .hidden{display:none !important;}
+
+  /* ---- top bar ---- */
+  header{position:sticky; top:0; z-index:30; background:linear-gradient(180deg,#0A1B33 70%,rgba(10,27,51,.0));
+    padding:10px 14px 6px; display:flex; align-items:center; gap:10px;}
+  .brand{font-family:"Arial Black",Arial,sans-serif; font-weight:900; letter-spacing:.5px;
+    font-size:15px; color:var(--gold); line-height:1; text-transform:uppercase;}
+  .brand small{display:block; font-size:9.5px; letter-spacing:2.5px; color:var(--ink-dim); font-weight:700; margin-top:3px;}
+  .lotpill{margin-left:auto; display:flex; align-items:center; gap:8px; background:var(--navy-2);
+    border:1px solid var(--line); border-radius:999px; padding:6px 12px; max-width:58%;}
+  .lotpill .nm{font-weight:800; font-size:12.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:var(--ink);}
+  .lotpill .ct{font-size:11px; color:var(--gold); font-weight:900; flex:none;}
+
+  main{padding:0 14px;}
+  h2.section{font-family:"Arial Black",Arial,sans-serif; text-transform:uppercase; letter-spacing:1px;
+    font-size:13px; color:var(--ink-dim); margin:18px 2px 8px;}
+
+  /* ---- camera ---- */
+  .camera-wrap{position:relative; width:100%; aspect-ratio:3/4; background:#05101f;
+    border-radius:18px; overflow:hidden; border:1px solid var(--line);}
+  #video{width:100%; height:100%; object-fit:cover; display:block; background:#05101f;}
+  .guide{position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+    width:84%; aspect-ratio:63/88; max-height:94%;
+    border:2px solid var(--cyan); border-radius:14px; box-shadow:0 0 0 9999px rgba(5,16,31,.45);
+    pointer-events:none;}
+  .guide::before{content:""; position:absolute; left:5%; width:82%; top:4.5%; height:9%;
+    border:1.5px dashed var(--gold); border-radius:4px;}
+  .guide::after{content:"FIT THE CARD EDGES TO THE FRAME"; position:absolute; left:0; right:0; top:-22px;
+    text-align:center; font-size:10px; letter-spacing:1.5px; font-weight:800; color:var(--cyan);}
+  .cam-msg{position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    text-align:center; padding:24px; color:var(--ink-dim); font-size:13.5px; line-height:1.5;}
+  .cam-msg b{color:var(--ink);}
+
+  .scanrow{display:flex; gap:10px; margin-top:12px;}
+  button{font-family:inherit; cursor:pointer; border:none; border-radius:13px; font-weight:800;}
+  .btn-scan{flex:1; background:var(--gold); color:#1a1206; font-size:17px; padding:16px;
+    font-family:"Arial Black",Arial,sans-serif; letter-spacing:.5px;
+    display:flex; align-items:center; justify-content:center; gap:9px;}
+  .btn-scan:disabled{opacity:.45;}
+  .btn-flip{flex:none; width:54px; background:var(--navy-2); color:var(--ink); border:1px solid var(--line); font-size:20px;}
+
+  .prog{margin-top:10px; height:6px; background:var(--navy-2); border-radius:6px; overflow:hidden; display:none;}
+  .prog.show{display:block;}
+  .prog i{display:block; height:100%; width:0%; background:var(--cyan); transition:width .2s;}
+  .progtxt{font-size:11px; color:var(--ink-dim); margin-top:6px; text-align:center; min-height:14px;}
+
+  /* ---- verdict ---- */
+  .verdict{margin-top:14px; border-radius:18px; padding:18px; border:2px solid var(--line);
+    background:var(--navy-2); transition:transform .12s; animation:pop .18s ease;}
+  @keyframes pop{from{transform:scale(.97); opacity:.4} to{transform:scale(1); opacity:1}}
+  .verdict.in{border-color:var(--amber); background:linear-gradient(180deg,rgba(245,181,51,.14),var(--navy-2));}
+  .verdict.max{border-color:var(--red); background:linear-gradient(180deg,rgba(255,90,90,.16),var(--navy-2));}
+  .verdict.new{border-color:var(--green); background:linear-gradient(180deg,rgba(52,209,122,.14),var(--navy-2));}
+  .verdict.unknown{border-color:var(--line);}
+  .v-status{font-family:"Arial Black",Arial,sans-serif; font-size:24px; letter-spacing:.5px; text-transform:uppercase; line-height:1;}
+  .verdict.in .v-status{color:var(--amber);}
+  .verdict.max .v-status{color:var(--red);}
+  .verdict.new .v-status{color:var(--green);}
+  .v-name{font-size:18px; font-weight:800; margin-top:10px; color:var(--ink); word-break:break-word;}
+  .v-sub{font-size:12.5px; color:var(--ink-dim); margin-top:5px;}
+  .v-count{font-family:"Arial Black",Arial,sans-serif; font-size:30px; margin-top:6px;}
+  .verdict.in .v-count{color:var(--amber);} .verdict.max .v-count{color:var(--red);}
+  .v-edit{width:100%; margin-top:12px; background:#06121f; border:1px solid var(--line); color:var(--ink);
+    border-radius:11px; padding:13px; font-size:16px; font-weight:700;}
+  .v-actions{display:flex; gap:9px; margin-top:12px; flex-wrap:wrap;}
+  .v-actions button{flex:1; min-width:120px; padding:14px 10px; font-size:14px;}
+  .b-add{background:var(--green); color:#062414;}
+  .b-add2{background:var(--gold); color:#1a1206;}
+  .b-ghost{background:transparent; border:1px solid var(--line); color:var(--ink-dim); font-weight:700;}
+  .b-ghost.small{flex:none; min-width:0; padding:10px 12px; font-size:12px;}
+
+  /* ---- manual ---- */
+  .manual{margin-top:16px; display:flex; gap:9px;}
+  .manual input{flex:1; background:var(--navy-2); border:1px solid var(--line); color:var(--ink);
+    border-radius:12px; padding:14px; font-size:16px;}
+  .manual button{flex:none; padding:0 18px; background:var(--cyan); color:#04222a; font-size:14px;}
+
+  /* ---- lot list ---- */
+  .lot-head{display:flex; align-items:baseline; gap:10px; margin:4px 2px 12px;}
+  .lot-head .big{font-family:"Arial Black",Arial,sans-serif; font-size:20px; color:var(--ink);}
+  .lot-head .meta{font-size:12px; color:var(--ink-dim); margin-left:auto;}
+  .card-row{display:flex; align-items:center; gap:10px; background:var(--navy-2); border:1px solid var(--line);
+    border-radius:12px; padding:11px 12px; margin-bottom:8px;}
+  .card-row .nm{flex:1; font-weight:700; font-size:15px; word-break:break-word;}
+  .card-row .nm small{display:block; color:var(--ink-dim); font-weight:600; font-size:11px; margin-top:2px;}
+  .qtybox{display:flex; align-items:center; gap:0; flex:none;}
+  .qtybox button{width:34px; height:34px; font-size:19px; background:var(--navy-3); color:var(--ink); border-radius:9px;}
+  .qtybox .q{width:30px; text-align:center; font-weight:900; font-size:16px; color:var(--gold);}
+  .qtybox .q.atmax{color:var(--red);}
+  .del{flex:none; width:34px; height:34px; background:transparent; color:var(--red); font-size:17px; border:1px solid var(--line); border-radius:9px;}
+  .empty{text-align:center; color:var(--ink-dim); padding:50px 20px; font-size:14px; line-height:1.6;}
+  .empty b{color:var(--ink); display:block; margin-bottom:6px; font-size:16px;}
+
+  /* ---- setup ---- */
+  .card-block{background:var(--navy-2); border:1px solid var(--line); border-radius:14px; padding:14px; margin-bottom:12px;}
+  .card-block h3{margin:0 0 4px; font-size:14px; font-family:"Arial Black",Arial,sans-serif; color:var(--ink);}
+  .card-block p{margin:0 0 10px; font-size:12px; color:var(--ink-dim); line-height:1.5;}
+  textarea{width:100%; min-height:90px; background:#06121f; border:1px solid var(--line); color:var(--ink);
+    border-radius:11px; padding:11px; font-size:14px; font-family:inherit; resize:vertical;}
+  select, .num{background:#06121f; border:1px solid var(--line); color:var(--ink); border-radius:10px; padding:11px; font-size:15px; width:100%;}
+  .num{width:80px;}
+  .row{display:flex; gap:9px; align-items:center; flex-wrap:wrap;}
+  .row > *{margin-top:8px;}
+  .fullbtn{width:100%; padding:13px; font-size:14px; margin-top:8px;}
+  .b-cyan{background:var(--cyan); color:#04222a;}
+  .b-gold{background:var(--gold); color:#1a1206;}
+  .b-navy{background:var(--navy-3); color:var(--ink); border:1px solid var(--line);}
+  label.lbl{font-size:11px; color:var(--ink-dim); font-weight:700; text-transform:uppercase; letter-spacing:.5px; display:block; margin-bottom:4px;}
+
+  /* ---- bottom nav ---- */
+  nav{position:fixed; bottom:0; left:0; right:0; z-index:40; background:var(--navy-2);
+    border-top:1px solid var(--line); display:flex; padding-bottom:var(--pad);}
+  nav button{flex:1; background:none; border:none; color:var(--ink-dim); padding:11px 4px 9px;
+    font-size:10.5px; font-weight:800; letter-spacing:.5px; display:flex; flex-direction:column; align-items:center; gap:4px;}
+  nav button .ic{font-size:21px; line-height:1;}
+  nav button.active{color:var(--gold);}
+
+  .toast{position:fixed; left:50%; bottom: calc(86px + var(--pad)); transform:translateX(-50%) translateY(20px);
+    background:#04222a; color:var(--cyan); border:1px solid var(--cyan-dim); padding:11px 18px; border-radius:12px;
+    font-weight:800; font-size:13px; z-index:60; opacity:0; transition:.25s; pointer-events:none; white-space:nowrap;}
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+
+  .v-corr{font-size:11.5px; color:var(--ink-dim); margin-top:8px; line-height:1.4;}
+  .v-corr b{color:var(--cyan);}
+
+  /* ---- scan log ---- */
+  .logwrap{margin-top:22px;}
+  .loghead{display:flex; align-items:center; margin:0 2px 8px;}
+  .loghead span{font-family:"Arial Black",Arial,sans-serif; text-transform:uppercase; letter-spacing:1px;
+    font-size:13px; color:var(--ink-dim);}
+  .loghead button{margin-left:auto;}
+  .loglist{display:flex; flex-direction:column; gap:6px;}
+  .logrow{display:flex; align-items:center; gap:9px; background:var(--navy-2); border:1px solid var(--line);
+    border-radius:10px; padding:9px 11px;}
+  .logrow .lnm{flex:1; font-size:13.5px; font-weight:700; word-break:break-word;}
+  .logrow .ltime{font-size:10.5px; color:var(--ink-dim); flex:none;}
+  .chip{flex:none; font-size:10px; font-weight:900; letter-spacing:.4px; text-transform:uppercase;
+    padding:4px 8px; border-radius:999px;}
+  .chip.in{background:rgba(245,181,51,.18); color:var(--gold);}
+  .chip.max,.chip.dup{background:rgba(255,90,90,.18); color:var(--red);}
+  .chip.new{background:rgba(52,209,122,.18); color:var(--green);}
+  .chip.added{background:rgba(37,208,224,.18); color:var(--cyan);}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">The Loot Mill<small>LOT SCANNER</small></div>
+  <button class="lotpill" id="lotPill" onclick="go('setup')" style="border:1px solid var(--line);background:var(--navy-2);">
+    <span class="nm" id="lotPillName">—</span><span class="ct" id="lotPillCount">0</span>
+  </button>
+</header>
+
+<!-- ============ SCAN VIEW ============ -->
+<main id="view-scan">
+  <div class="camera-wrap" id="camWrap">
+    <video id="video" playsinline muted autoplay></video>
+    <div class="guide" id="guideBox"></div>
+    <div class="cam-msg" id="camMsg">
+      <div><b>Camera is off.</b><br>Tap <b>Start camera</b> below, then point the rear camera at a card.</div>
+    </div>
+  </div>
+
+  <div class="scanrow">
+    <button class="btn-scan" id="scanBtn" onclick="onScan()">📷 Start camera</button>
+    <button class="btn-flip hidden" id="flipBtn" onclick="flipCamera()" title="Switch camera">⟳</button>
+  </div>
+
+  <div class="prog" id="prog"><i id="progBar"></i></div>
+  <div class="progtxt" id="progTxt"></div>
+
+  <div id="verdict"></div>
+
+  <div class="manual">
+    <input id="manualName" type="text" placeholder="…or type a card name to check" autocomplete="off"
+           enterkeyhint="search" onkeydown="if(event.key==='Enter')checkManual()">
+    <button onclick="checkManual()">Check</button>
+  </div>
+
+  <div class="logwrap hidden" id="logWrap">
+    <div class="loghead"><span>Scan log</span>
+      <button class="b-ghost small" onclick="clearLog()">Clear</button></div>
+    <div class="loglist" id="logList"></div>
+  </div>
+</main>
+
+<!-- ============ LOT VIEW ============ -->
+<main id="view-lot" class="hidden">
+  <div class="lot-head">
+    <span class="big" id="lotTitle">—</span>
+    <span class="meta" id="lotMeta"></span>
+  </div>
+  <div id="lotList"></div>
+</main>
+
+<!-- ============ SETUP VIEW ============ -->
+<main id="view-setup" class="hidden">
+  <h2 class="section">Current lot</h2>
+  <div class="card-block">
+    <label class="lbl">Active lot</label>
+    <div class="row">
+      <select id="lotSelect" onchange="switchLot(this.value)" style="flex:1;"></select>
+    </div>
+    <div class="row">
+      <input class="num" id="newLotName" placeholder="New lot name" style="flex:1; width:auto;">
+      <button class="b-cyan" style="padding:11px 16px;" onclick="createLot()">Create</button>
+    </div>
+
+    <label class="lbl" style="margin-top:14px">Duplicate policy</label>
+    <select id="lotMax" onchange="setLotMax(this.value)">
+      <option value="1">No duplicates — 1 of each card</option>
+      <option value="2">Max 2 of each</option>
+      <option value="3">Max 3 of each</option>
+      <option value="4">Max 4 of each</option>
+      <option value="6">Max 6 of each</option>
+      <option value="8">Max 8 of each</option>
+      <option value="99">Unlimited</option>
+    </select>
+
+    <label class="lbl" style="margin-top:12px">Game (name cleanup)</label>
+    <select id="lotGame" onchange="setLotGame(this.value)">
+      <option value="mtg">Magic — auto-correct reads via Scryfall</option>
+      <option value="pokemon">Pokémon — no auto-correct</option>
+      <option value="other">Other — no auto-correct</option>
+    </select>
+
+    <div class="row" style="margin-top:14px">
+      <button class="b-navy fullbtn" onclick="renameLot()">Rename lot</button>
+      <button class="b-navy fullbtn" style="color:var(--red);border-color:var(--line);" onclick="deleteLot()">Delete lot</button>
+    </div>
+  </div>
+
+  <div class="card-block">
+    <label class="lbl">Default policy for new lots</label>
+    <p>Used when you create a fresh lot.</p>
+    <div class="row">
+      <input class="num" id="defMax" type="number" min="1" max="99" value="4" onchange="setDefaultMax(this.value)">
+      <span style="font-size:12px;color:var(--ink-dim)">copies max (1 = no duplicates)</span>
+    </div>
+  </div>
+
+  <h2 class="section">Load an existing lot</h2>
+  <div class="card-block">
+    <h3>Paste a list</h3>
+    <p>One card per line. Optional quantity in front: <b>3 Goblin Guide</b>, <b>2x Lightning Bolt</b>, or just the name.</p>
+    <textarea id="pasteBox" placeholder="4 Goblin Guide&#10;3 Lightning Bolt&#10;Goblin Matron"></textarea>
+    <button class="b-cyan fullbtn" onclick="importPaste()">Add pasted cards to lot</button>
+  </div>
+  <div class="card-block">
+    <h3>Import a CSV</h3>
+    <p>Reads a <b>Card Name</b> column (also works with Product Name / Name). Picks up Qty &amp; Condition if present — same exports your Lot Maker / Scan &amp; Identify produce.</p>
+    <button class="b-cyan fullbtn" onclick="document.getElementById('csvFile').click()">Choose CSV file</button>
+    <input id="csvFile" type="file" accept=".csv,text/csv" class="hidden" onchange="importCSV(this.files[0])">
+  </div>
+
+  <h2 class="section">Export this lot</h2>
+  <div class="card-block">
+    <button class="b-gold fullbtn" onclick="exportCSV()">Download CSV</button>
+    <button class="b-navy fullbtn" onclick="copyMassEntry()">Copy as Mass Entry lines</button>
+    <button class="b-navy fullbtn" onclick="copyList()">Copy as "qty Name" list</button>
+  </div>
+
+  <div class="card-block" style="border-color:var(--cyan-dim);">
+    <h3 style="color:var(--cyan)">Camera not working?</h3>
+    <p style="margin-bottom:0">The camera only runs on a secure connection. Open this file from <b>https://</b> (GitHub Pages works) — not from a file:// link or the chat preview. Then allow camera access when your phone asks. Typing names always works regardless.</p>
+  </div>
+  <div style="height:20px"></div>
+</main>
+
+<!-- ============ NAV ============ -->
+<nav>
+  <button id="nav-scan" class="active" onclick="go('scan')"><span class="ic">🎯</span>Scan</button>
+  <button id="nav-lot" onclick="go('lot')"><span class="ic">📦</span>Lot</button>
+  <button id="nav-setup" onclick="go('setup')"><span class="ic">⚙️</span>Setup</button>
+</nav>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============================================================
+   The Loot Mill — Lot Scanner
+   Standalone. Camera + OCR (Tesseract.js) + fuzzy lot matching.
+   State persists in this browser via localStorage.
+============================================================ */
+
+const STORE_KEY = 'loot_mill_scanner_v1';
+let state = loadState();
+let stream = null, worker = null, facing = 'environment';
+
+/* ---------- persistence ---------- */
+function loadState(){
+  let s=null;
+  try{ s=JSON.parse(localStorage.getItem(STORE_KEY)); }catch(e){}
+  if(!s||!s.lots) s={ lots:{ "Working Lot":{} }, current:"Working Lot", defaultMax:4 };
+  if(s.defaultMax==null) s.defaultMax=4;
+  for(const name in s.lots){
+    const lot=s.lots[name];
+    if(!lot.cards) lot.cards={};
+    if(lot.max==null) lot.max=s.defaultMax||4;
+    if(!lot.game) lot.game='mtg';
+    if(!Array.isArray(lot.log)) lot.log=[];
+    for(const k in lot.cards){ const c=lot.cards[k]; if(c.max==null) c.max=lot.max; if(!c.condition) c.condition='NM'; }
+  }
+  if(!s.current||!s.lots[s.current]) s.current=Object.keys(s.lots)[0];
+  return s;
+}
+function save(){ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
+function curLot(){ return state.lots[state.current]; }
+
+/* ---------- helpers ---------- */
+function normalize(s){
+  return (s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/[^a-z0-9 ]/g,' ').replace(/\s+/g,' ').trim();
+}
+function lev(a,b){
+  const m=a.length, n=b.length;
+  if(!m) return n; if(!n) return m;
+  let prev=Array.from({length:n+1},(_,i)=>i), cur=new Array(n+1);
+  for(let i=1;i<=m;i++){
+    cur[0]=i;
+    for(let j=1;j<=n;j++){
+      const cost=a[i-1]===b[j-1]?0:1;
+      cur[j]=Math.min(cur[j-1]+1, prev[j]+1, prev[j-1]+cost);
+    }
+    [prev,cur]=[cur,prev];
+  }
+  return prev[n];
+}
+function similarity(a,b){
+  a=normalize(a); b=normalize(b);
+  if(!a||!b) return 0;
+  if(a===b) return 1;
+  if(a.includes(b)||b.includes(a)) return 0.9;
+  // token containment: does the lot name appear as a run of tokens in the OCR text?
+  const at=a.split(' '), bt=b.split(' ');
+  if(bt.length && bt.every(t=>at.includes(t))) return 0.85;
+  const d=lev(a,b); return 1 - d/Math.max(a.length,b.length);
+}
+function toast(msg){
+  const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show');
+  clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('show'),1600);
+}
+
+/* ---------- navigation ---------- */
+function go(v){
+  ['scan','lot','setup'].forEach(x=>{
+    document.getElementById('view-'+x).classList.toggle('hidden', x!==v);
+    document.getElementById('nav-'+x).classList.toggle('active', x===v);
+  });
+  if(v==='scan') renderLog();
+  if(v==='lot') renderLot();
+  if(v==='setup') renderSetup();
+  if(v!=='scan') stopCamera();
+}
+
+/* ---------- camera ---------- */
+async function onScan(){
+  if(!stream){ await startCamera(); return; }
+  await captureAndRead();
+}
+async function startCamera(){
+  try{
+    stream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:{ ideal:facing }, width:{ideal:1920}, height:{ideal:1080} }, audio:false });
+    const v=document.getElementById('video'); v.srcObject=stream; await v.play();
+    document.getElementById('camMsg').classList.add('hidden');
+    document.getElementById('flipBtn').classList.remove('hidden');
+    document.getElementById('scanBtn').innerHTML='📷 Scan card';
+  }catch(e){
+    document.getElementById('camMsg').innerHTML =
+      '<div><b>Couldn\'t open the camera.</b><br>'+
+      'Make sure this page is on <b>https://</b> and you allowed camera access. '+
+      'You can still type names below.</div>';
+    document.getElementById('camMsg').classList.remove('hidden');
+  }
+}
+function stopCamera(){
+  if(stream){ stream.getTracks().forEach(t=>t.stop()); stream=null; }
+  const b=document.getElementById('scanBtn'); if(b) b.innerHTML='📷 Start camera';
+  const f=document.getElementById('flipBtn'); if(f) f.classList.add('hidden');
+  const m=document.getElementById('camMsg'); if(m){ m.classList.remove('hidden');
+    m.innerHTML='<div><b>Camera is off.</b><br>Tap <b>Start camera</b> below, then point the rear camera at a card.</div>'; }
+}
+async function flipCamera(){
+  facing = facing==='environment' ? 'user' : 'environment';
+  if(stream){ stream.getTracks().forEach(t=>t.stop()); stream=null; }
+  await startCamera();
+}
+
+/* ---------- capture geometry (handles object-fit:cover) ---------- */
+function mapGuideToVideo(){
+  const v=document.getElementById('video'), wrap=document.getElementById('camWrap'), guide=document.getElementById('guideBox');
+  const vw=v.videoWidth, vh=v.videoHeight; if(!vw) return null;
+  const cw=wrap.clientWidth, ch=wrap.clientHeight;
+  const scale=Math.max(cw/vw, ch/vh);
+  const offX=(vw*scale-cw)/2, offY=(vh*scale-ch)/2;
+  const wr=wrap.getBoundingClientRect(), gb=guide.getBoundingClientRect();
+  const gx=gb.left-wr.left, gy=gb.top-wr.top;
+  return { sx:(gx+offX)/scale, sy:(gy+offY)/scale, sw:gb.width/scale, sh:gb.height/scale };
+}
+// crop a fractional region (fx,fy,fw,fh) inside the guide, upscaled to outW wide
+function cropRegion(g, fx, fy, fw, fh, outW){
+  const sx=g.sx+g.sw*fx, sy=g.sy+g.sh*fy, sw=g.sw*fw, sh=g.sh*fh;
+  const W=outW, H=Math.max(1, Math.round(outW*(sh/sw)));
+  const c=document.createElement('canvas'); c.width=W; c.height=H;
+  c.getContext('2d').drawImage(document.getElementById('video'), sx, sy, sw, sh, 0, 0, W, H);
+  return c;
+}
+// grayscale + Otsu threshold -> black text on white (auto-inverts dark frames)
+function preprocess(c){
+  const ctx=c.getContext('2d'), w=c.width, h=c.height, total=w*h;
+  const img=ctx.getImageData(0,0,w,h), d=img.data;
+  const gray=new Uint8ClampedArray(total), hist=new Array(256).fill(0);
+  for(let i=0,p=0;i<d.length;i+=4,p++){ const g=(0.3*d[i]+0.59*d[i+1]+0.11*d[i+2])|0; gray[p]=g; hist[g]++; }
+  let sum=0; for(let t=0;t<256;t++) sum+=t*hist[t];
+  let sumB=0, wB=0, maxVar=0, thr=127;
+  for(let t=0;t<256;t++){ wB+=hist[t]; if(!wB) continue; const wF=total-wB; if(!wF) break;
+    sumB+=t*hist[t]; const mB=sumB/wB, mF=(sum-sumB)/wF, v=wB*wF*(mB-mF)*(mB-mF);
+    if(v>maxVar){ maxVar=v; thr=t; } }
+  let above=0; for(let p=0;p<total;p++) if(gray[p]>thr) above++;
+  const lightBg = above >= total/2;     // most pixels light => dark text already
+  for(let i=0,p=0;i<d.length;i+=4,p++){
+    let light = gray[p]>thr; if(!lightBg) light=!light;
+    const v=light?255:0; d[i]=d[i+1]=d[i+2]=v;
+  }
+  ctx.putImageData(img,0,0); return c;
+}
+
+async function getWorker(){
+  if(worker) return worker;
+  if(typeof Tesseract==='undefined') throw new Error('no-ocr');
+  worker = await Tesseract.createWorker('eng', 1, {
+    logger:m=>{
+      if(m.status==='recognizing text'){ setProg(0.3+m.progress*0.6, 'Reading card…'); }
+      else if(m.status && m.progress!=null){ setProg(m.progress*0.3, 'Loading reader…'); }
+    }
+  });
+  return worker;
+}
+async function ocr(canvas, psm){
+  const w=await getWorker();
+  await w.setParameters({ tessedit_pageseg_mode:String(psm) });
+  const { data } = await w.recognize(canvas);
+  return data.text||'';
+}
+function setProg(p, txt){
+  const w=document.getElementById('prog'), b=document.getElementById('progBar'), t=document.getElementById('progTxt');
+  w.classList.add('show'); b.style.width=Math.round(p*100)+'%'; t.textContent=txt||'';
+}
+function clearProg(){ document.getElementById('prog').classList.remove('show');
+  document.getElementById('progBar').style.width='0%'; document.getElementById('progTxt').textContent=''; }
+
+async function captureAndRead(){
+  const btn=document.getElementById('scanBtn'); btn.disabled=true;
+  try{
+    const g=mapGuideToVideo();
+    if(!g){ clearProg(); showVerdict({status:'unknown', query:''}); return; }
+    setProg(0.05,'Loading reader…');
+    // 1) name strip from the top of the card frame
+    const nameImg=cropRegion(g, 0.05, 0.045, 0.82, 0.09, 1000); preprocess(nameImg);
+    let raw=cleanLine(await ocr(nameImg, 7));
+    let candidates = raw.length>=3 ? [raw] : [];
+    // 2) fallback: read the whole card and grab the top text lines
+    if(!candidates.length){
+      setProg(0.55,'Reading full card…');
+      const full=cropRegion(g, 0, 0, 1, 1, 1200); preprocess(full);
+      candidates = topLines(await ocr(full, 6), 3);
+    }
+    clearProg();
+    if(!candidates.length){ showVerdict({status:'unknown', query:''}); return; }
+    await resolveAndShow(candidates);
+  }catch(e){
+    clearProg();
+    showVerdict({status:'unknown', query:'', noOCR:e.message==='no-ocr'});
+  }finally{ btn.disabled=false; }
+}
+
+/* ---------- the core check ---------- */
+function statusFor(card){ return card.max===1 ? 'dup' : (card.qty>=card.max ? 'max' : 'in'); }
+
+function cleanLine(s){
+  const line=(s||'').split('\n').map(x=>x.trim()).filter(Boolean)[0]||'';
+  return line.replace(/[^A-Za-z',\- ]/g,' ').replace(/\s+/g,' ').trim();
+}
+function topLines(s, n){
+  return (s||'').split('\n')
+    .map(x=>x.replace(/[^A-Za-z',\- ]/g,' ').replace(/\s+/g,' ').trim())
+    .filter(x=>x.length>=3 && /[A-Za-z]{3,}/.test(x))
+    .slice(0, n);
+}
+async function scryfall(q){
+  try{
+    const res=await fetch('https://api.scryfall.com/cards/named?fuzzy='+encodeURIComponent(q));
+    if(res.ok){ const j=await res.json(); if(j && j.name) return j.name; }
+  }catch(e){}
+  return null;
+}
+
+// from OCR candidates -> resolve (MTG via Scryfall) -> match + verdict
+async function resolveAndShow(candidates){
+  const lot=curLot();
+  let name=candidates[0], raw=candidates[0], corrected=false;
+  if(lot.game==='mtg'){
+    setProg(1,'Checking name…');
+    for(const c of candidates){ const r=await scryfall(c); if(r){ name=r; raw=c; corrected=normalize(r)!==normalize(c); break; } }
+    clearProg();
+  }
+  matchAndShow(name, raw, corrected, true);
+}
+// from a typed/known name -> resolve -> match + verdict
+async function runCheck(input){
+  if(!input){ showVerdict({status:'unknown', query:''}); return; }
+  const lot=curLot();
+  let name=input, corrected=false;
+  if(lot.game==='mtg'){ setProg(1,'Checking name…'); const r=await scryfall(input); clearProg(); if(r){ name=r; corrected=normalize(r)!==normalize(input); } }
+  matchAndShow(name, input, corrected, false);
+}
+function matchAndShow(name, raw, corrected, scan){
+  const lot=curLot(); let best=null, bestScore=0;
+  for(const key in lot.cards){
+    const s=similarity(name, lot.cards[key].name);
+    if(s>bestScore){ bestScore=s; best=lot.cards[key]; }
+  }
+  const status = (best && bestScore>=0.6) ? statusFor(best) : 'new';
+  showVerdict({ status, card:best, query:name, raw, corrected, scan, score:bestScore, near:best, nearScore:bestScore });
+  logScan(name, status);
+}
+function checkManual(){
+  const v=document.getElementById('manualName').value.trim();
+  if(!v) return;
+  runCheck(v);
+}
+
+/* ---------- scan log ---------- */
+const CHIP_LABEL={ in:'in lot', max:'at max', dup:'duplicate', new:'not in lot', added:'added' };
+function logScan(name, status){
+  const lot=curLot();
+  lot.log.unshift({ name, status, t:Date.now() });
+  if(lot.log.length>150) lot.log.length=150;
+  save(); renderLog();
+}
+function renderLog(){
+  const lot=curLot(); const wrap=document.getElementById('logWrap'); const list=document.getElementById('logList');
+  if(!lot.log.length){ wrap.classList.add('hidden'); return; }
+  wrap.classList.remove('hidden');
+  list.innerHTML=lot.log.slice(0,40).map(e=>{
+    const t=new Date(e.t).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+    return `<div class="logrow"><span class="lnm">${esc(e.name)}</span>
+      <span class="chip ${e.status}">${CHIP_LABEL[e.status]||e.status}</span>
+      <span class="ltime">${t}</span></div>`;
+  }).join('');
+}
+function clearLog(){ curLot().log=[]; save(); renderLog(); }
+
+/* ---------- verdict UI ---------- */
+function readNote(r){
+  if(!r.scan || !r.raw) return '';
+  if(r.corrected && normalize(r.raw)!==normalize(r.query))
+    return `<div class="v-corr">Read <b>${esc(r.raw)}</b> → matched <b>${esc(r.query)}</b> via Scryfall</div>`;
+  return `<div class="v-corr">Read: <b>${esc(r.raw)}</b></div>`;
+}
+function showVerdict(r){
+  const box=document.getElementById('verdict'); let html='';
+  if(r.status==='in' || r.status==='max' || r.status==='dup'){
+    const c=r.card;
+    const cls = r.status==='in' ? 'in' : 'max';
+    const heading = r.status==='dup' ? '⛔ Duplicate' : (r.status==='max' ? '⛔ At max' : '⚠ Already in lot');
+    const countLine = r.status==='dup' ? '' : `<div class="v-count">${c.qty} / ${c.max}</div>`;
+    const sub = r.status==='dup' ? 'This is a no-duplicates lot — it\'s already in here.'
+              : r.status==='max' ? 'You\'ve hit your cap — don\'t add another.'
+              : 'This card is already in the lot.';
+    html = `<div class="verdict ${cls}">
+      <div class="v-status">${heading}</div>
+      <div class="v-name">${esc(c.name)}</div>
+      ${countLine}
+      <div class="v-sub">${sub}${r.score!=null && r.score<0.9?' · best name match':''}</div>
+      ${readNote(r)}
+      <div class="v-actions">
+        ${r.status==='in'?`<button class="b-add2" onclick="bump('${jsq(c.name)}',1)">Add another (+1)</button>`:''}
+        <button class="b-ghost" onclick="newFrom('${jsq(r.query||c.name)}')">It's a different card</button>
+      </div>
+    </div>`;
+  } else if(r.status==='new'){
+    html = `<div class="verdict new">
+      <div class="v-status">✓ Not in lot</div>
+      <input class="v-edit" id="newName" value="${esc(r.query)}">
+      <div class="v-sub">${r.near && r.nearScore>0.4 ? 'Closest in lot: '+esc(r.near.name)+' (not a match)' : 'Fix the name if the read was off, then add it.'}</div>
+      ${readNote(r)}
+      <div class="v-actions">
+        <button class="b-add" onclick="addFromInput()">Add to lot</button>
+        <button class="b-ghost small" onclick="clearVerdict()">Cancel</button>
+      </div>
+    </div>`;
+  } else {
+    html = `<div class="verdict unknown">
+      <div class="v-name">${r.noOCR?'Reader didn\'t load':'Couldn\'t read the name'}</div>
+      <div class="v-sub">${r.noOCR?'No internet to load the scanner. Type the name below to check it.':'Try again with the name inside the box and steady light — or type it below.'}</div>
+    </div>`;
+  }
+  box.innerHTML=html;
+  box.scrollIntoView({behavior:'smooth', block:'nearest'});
+}
+function clearVerdict(){ document.getElementById('verdict').innerHTML=''; }
+
+function bump(name, n){
+  addCard(name, n); const c=curLot().cards[normalize(name)];
+  showVerdict({status: statusFor(c), card:c, query:name, score:1});
+  logScan(c.name,'added'); refreshPill(); toast('Now '+c.qty+'×');
+}
+function newFrom(q){ showVerdict({status:'new', query:q}); }
+function addFromInput(){
+  const v=document.getElementById('newName').value.trim();
+  if(!v){ toast('Type a name first'); return; }
+  addCard(v,1); logScan(v.trim(),'added'); refreshPill(); clearVerdict();
+  document.getElementById('manualName').value='';
+  toast('Added to '+state.current);
+}
+
+/* ---------- lot mutations ---------- */
+function addCard(name, qty){
+  const lot=curLot(); const key=normalize(name);
+  if(!key) return;
+  if(lot.cards[key]){ lot.cards[key].qty=Math.min(lot.cards[key].max, lot.cards[key].qty+qty); }
+  else{ lot.cards[key]={ name:name.trim(), qty:Math.min(lot.max,qty), max:lot.max, condition:'NM' }; }
+  save();
+}
+function setQty(key, delta){
+  const c=curLot().cards[key]; if(!c) return;
+  c.qty=Math.max(0, Math.min(c.max, c.qty+delta));
+  if(c.qty===0) delete curLot().cards[key];
+  save(); renderLot(); refreshPill();
+}
+function removeCard(key){ delete curLot().cards[key]; save(); renderLot(); refreshPill(); }
+
+/* ---------- lot view ---------- */
+function renderLot(){
+  const lot=curLot(); const keys=Object.keys(lot.cards);
+  document.getElementById('lotTitle').textContent=state.current;
+  const unique=keys.length, total=keys.reduce((s,k)=>s+lot.cards[k].qty,0);
+  document.getElementById('lotMeta').textContent=unique+' unique · '+total+' cards';
+  const list=document.getElementById('lotList');
+  if(!unique){ list.innerHTML='<div class="empty"><b>No cards yet</b>Scan a card or type a name to start building this lot.</div>'; return; }
+  keys.sort((a,b)=>lot.cards[a].name.localeCompare(lot.cards[b].name));
+  list.innerHTML=keys.map(k=>{
+    const c=lot.cards[k], atMax=c.qty>=c.max;
+    return `<div class="card-row">
+      <div class="nm">${esc(c.name)}<small>max ${c.max}${atMax?' · at cap':''}</small></div>
+      <div class="qtybox">
+        <button onclick="setQty('${jsq(k)}',-1)">–</button>
+        <span class="q ${atMax?'atmax':''}">${c.qty}</span>
+        <button onclick="setQty('${jsq(k)}',1)" ${atMax?'disabled style=opacity:.3':''}>+</button>
+      </div>
+      <button class="del" onclick="removeCard('${jsq(k)}')">✕</button>
+    </div>`;
+  }).join('');
+}
+
+/* ---------- setup / lots ---------- */
+function renderSetup(){
+  const sel=document.getElementById('lotSelect');
+  sel.innerHTML=Object.keys(state.lots).map(n=>`<option ${n===state.current?'selected':''}>${esc(n)}</option>`).join('');
+  document.getElementById('defMax').value=state.defaultMax;
+  document.getElementById('lotMax').value=String(curLot().max);
+  document.getElementById('lotGame').value=curLot().game;
+  refreshPill();
+}
+function switchLot(name){ state.current=name; save(); refreshPill(); renderSetup(); renderLog(); }
+function setLotGame(g){ curLot().game=g; save(); }
+function setLotMax(v){
+  const m=parseInt(v)||4; const lot=curLot(); lot.max=m;
+  for(const k in lot.cards){ lot.cards[k].max=m; if(lot.cards[k].qty>m) lot.cards[k].qty=m; }
+  save(); toast(m===1?'No duplicates set':'Max '+m+' set');
+}
+function createLot(){
+  const el=document.getElementById('newLotName'); const n=el.value.trim();
+  if(!n) return toast('Name the lot first');
+  if(state.lots[n]) return toast('That lot exists');
+  state.lots[n]={ cards:{}, max:state.defaultMax, game:'mtg', log:[] };
+  state.current=n; el.value=''; save(); renderSetup(); toast('Created '+n);
+}
+function renameLot(){
+  const n=prompt('Rename lot', state.current); if(!n||n===state.current) return;
+  if(state.lots[n]) return toast('That name is taken');
+  state.lots[n]=state.lots[state.current]; delete state.lots[state.current]; state.current=n; save(); renderSetup();
+}
+function deleteLot(){
+  if(Object.keys(state.lots).length<=1) return toast('Keep at least one lot');
+  if(!confirm('Delete "'+state.current+'" and its cards?')) return;
+  delete state.lots[state.current]; state.current=Object.keys(state.lots)[0]; save(); renderSetup();
+}
+function setDefaultMax(v){ state.defaultMax=Math.max(1,parseInt(v)||4); save(); }
+
+/* ---------- import ---------- */
+function importPaste(){
+  const lines=document.getElementById('pasteBox').value.split('\n'); let n=0;
+  lines.forEach(line=>{
+    line=line.trim(); if(!line) return;
+    let qty=1, name=line;
+    const m=line.match(/^(\d+)\s*[xX]?\s+(.+)$/);
+    if(m){ qty=parseInt(m[1]); name=m[2].trim(); }
+    const cm=line.match(/^(.+?),\s*(\d+)\s*$/);
+    if(cm){ name=cm[1].trim(); qty=parseInt(cm[2]); }
+    if(name){ addCard(name, qty); n++; }
+  });
+  document.getElementById('pasteBox').value='';
+  refreshPill(); toast(n+' lines added');
+}
+function importCSV(file){
+  if(!file) return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const rows=parseCSV(e.target.result);
+    if(!rows.length) return toast('Empty CSV');
+    const head=rows[0].map(h=>h.trim().toLowerCase());
+    const nameCol=findCol(head,['card name','product name','name','card']);
+    if(nameCol<0) return toast('No name column found');
+    const qtyCol=findCol(head,['add to quantity','total quantity','quantity','qty']);
+    let n=0;
+    for(let i=1;i<rows.length;i++){
+      const r=rows[i]; const nm=(r[nameCol]||'').trim(); if(!nm) continue;
+      let q=1; if(qtyCol>=0){ const pv=parseInt(r[qtyCol]); if(!isNaN(pv)&&pv>0) q=pv; }
+      addCard(nm, q); n++;
+    }
+    refreshPill(); toast(n+' cards imported');
+    go('lot');
+  };
+  reader.readAsText(file);
+}
+function findCol(head,names){ for(const nm of names){ const i=head.indexOf(nm); if(i>=0) return i; } return -1; }
+function parseCSV(txt){
+  const rows=[]; let row=[], cur='', q=false;
+  for(let i=0;i<txt.length;i++){
+    const ch=txt[i];
+    if(q){
+      if(ch==='"'){ if(txt[i+1]==='"'){cur+='"';i++;} else q=false; } else cur+=ch;
+    }else{
+      if(ch==='"') q=true;
+      else if(ch===','){ row.push(cur); cur=''; }
+      else if(ch==='\n'){ row.push(cur); rows.push(row); row=[]; cur=''; }
+      else if(ch==='\r'){}
+      else cur+=ch;
+    }
+  }
+  if(cur.length||row.length){ row.push(cur); rows.push(row); }
+  return rows.filter(r=>r.some(c=>c.trim()));
+}
+
+/* ---------- export ---------- */
+function lotRows(){
+  const lot=curLot(); return Object.keys(lot.cards).map(k=>lot.cards[k])
+    .sort((a,b)=>a.name.localeCompare(b.name));
+}
+function exportCSV(){
+  const rows=lotRows();
+  if(!rows.length) return toast('Lot is empty');
+  let csv='Card Name,Quantity,Condition\n';
+  rows.forEach(c=>{ csv+='"'+c.name.replace(/"/g,'""')+'",'+c.qty+','+(c.condition||'NM')+'\n'; });
+  download(csv, state.current.replace(/[^\w]+/g,'_')+'_lot.csv', 'text/csv');
+}
+function copyMassEntry(){
+  const rows=lotRows(); if(!rows.length) return toast('Lot is empty');
+  copyText(rows.map(c=>c.qty+' '+c.name).join('\n'), 'Mass Entry copied');
+}
+function copyList(){
+  const rows=lotRows(); if(!rows.length) return toast('Lot is empty');
+  copyText(rows.map(c=>c.qty+'x '+c.name).join('\n'), 'List copied');
+}
+function download(text, name, type){
+  const blob=new Blob([text],{type}); const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download=name; a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),1000); toast('Downloaded');
+}
+function copyText(t, msg){
+  if(navigator.clipboard){ navigator.clipboard.writeText(t).then(()=>toast(msg),()=>fallbackCopy(t,msg)); }
+  else fallbackCopy(t,msg);
+}
+function fallbackCopy(t,msg){
+  const ta=document.createElement('textarea'); ta.value=t; document.body.appendChild(ta);
+  ta.select(); try{document.execCommand('copy'); toast(msg);}catch(e){toast('Copy failed');}
+  document.body.removeChild(ta);
+}
+
+/* ---------- misc ---------- */
+function refreshPill(){
+  const lot=curLot(); const total=Object.keys(lot.cards).reduce((s,k)=>s+lot.cards[k].qty,0);
+  document.getElementById('lotPillName').textContent=state.current;
+  document.getElementById('lotPillCount').textContent=total;
+}
+function esc(s){ return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function jsq(s){ return (s||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
+
+refreshPill();
+</script>
+</body>
+</html>
