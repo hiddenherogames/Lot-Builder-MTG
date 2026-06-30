@@ -1,4 +1,3 @@
-
 <style>
 @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;500;700&display=swap');
 *{box-sizing:border-box;margin:0;padding:0;}
@@ -127,14 +126,15 @@ input:checked+.slider-t:before{background:var(--surface);transform:translateX(18
 .done-bar{text-align:center;padding:1rem;background:var(--teal-bg);border:1px solid #b0d9d3;border-radius:var(--radius);color:var(--teal-text);font-size:13px;font-weight:500;display:none;margin-bottom:0.75rem;}
 .pull-wrap{border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;}
 .pull-scroll{max-height:560px;overflow-y:auto;}
-.pull-head-row{display:grid;grid-template-columns:44px 1fr 110px;background:var(--surface2);font-family:var(--mono);font-size:11px;color:var(--ink3);letter-spacing:0.04em;position:sticky;top:0;border-bottom:1px solid var(--border);}
+.pull-head-row{display:grid;grid-template-columns:44px 1fr 84px 88px;background:var(--surface2);font-family:var(--mono);font-size:11px;color:var(--ink3);letter-spacing:0.04em;position:sticky;top:0;border-bottom:1px solid var(--border);}
 .pull-head-row>span{padding:8px 12px;}
-.pull-card-row{display:grid;grid-template-columns:44px 1fr 110px;border-bottom:1px solid var(--border);border-left:3px solid transparent;transition:background 0.1s;cursor:pointer;min-height:56px;align-items:center;}
+.pull-card-row{display:grid;grid-template-columns:44px 1fr 84px 88px;border-bottom:1px solid var(--border);border-left:3px solid transparent;transition:background 0.1s;cursor:pointer;min-height:56px;align-items:center;}
 .pull-card-row:last-child{border-bottom:none;}
 .pull-card-row:hover{background:var(--surface2);}
 .pull-card-row.done .pull-name{text-decoration:line-through;opacity:0.5;}
 .pull-card-row.done .pull-scan,.pull-card-row.done .pull-set{opacity:0.4;}
 .pull-card-row.done .pull-rar-cell{opacity:0.4;}
+.pull-card-row.done .swap-btn{opacity:0.4;}
 .pull-card-row>div{padding:10px 12px;}
 .pull-check-cell{display:flex;align-items:center;justify-content:center;padding:10px 8px !important;}
 .check-btn{width:22px;height:22px;border-radius:var(--radius);border:1.5px solid var(--border2);background:transparent;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.12s;}
@@ -142,12 +142,18 @@ input:checked+.slider-t:before{background:var(--surface);transform:translateX(18
 .check-btn.checked::after{content:'';display:block;width:5px;height:9px;border:2px solid #fff;border-top:none;border-left:none;transform:rotate(45deg) translateY(-1px);}
 .pull-main-cell{display:flex;flex-direction:column;gap:3px;min-width:0;}
 .pull-name-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.pull-num{font-family:var(--mono);font-size:13px;font-weight:600;color:var(--ink2);min-width:24px;flex-shrink:0;text-align:right;}
 .pull-name{font-size:14px;color:var(--ink);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:1;min-width:0;}
 .lot-pill{display:inline-flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:11px;font-weight:500;padding:2px 9px;border-radius:20px;white-space:nowrap;flex-shrink:0;}
 .pull-meta-row{display:flex;align-items:center;gap:8px;}
 .pull-scan{font-family:var(--mono);font-size:11px;color:var(--ink3);}
 .pull-set{font-family:var(--mono);font-size:11px;color:var(--ink3);}
 .pull-rar-cell{display:flex;align-items:center;justify-content:flex-end;}
+.pull-action-cell{display:flex;align-items:center;justify-content:flex-end;padding:10px 12px !important;}
+.swap-btn{font-family:var(--mono);font-size:10px;letter-spacing:0.02em;padding:5px 8px;border-radius:var(--radius);border:1px solid var(--border2);background:transparent;color:var(--ink2);cursor:pointer;white-space:nowrap;transition:all 0.12s;}
+.swap-btn:hover{background:var(--amber-bg);border-color:#e8c88a;color:var(--amber-text);}
+@keyframes subflash{0%{background:var(--amber-bg);}100%{background:transparent;}}
+.pull-card-row.subbed{animation:subflash 1.5s ease-out;}
 .color-bar{height:3px;width:100%;}
 .lots-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px;}
 .lot-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;}
@@ -363,6 +369,14 @@ input:checked+.slider-t:before{background:var(--surface);transform:translateX(18
     </div>
   </div>
 
+  <div class="dup-row" style="margin-top:-0.25rem">
+    <div class="dup-label">
+      Identical (duplicate) lots
+      <span id="ident-desc">Off — each lot is balanced independently</span>
+    </div>
+    <label class="toggle"><input type="checkbox" id="ident-toggle"><span class="slider-t"></span></label>
+  </div>
+
   <div class="config-grid">
     <div class="config-section">
       <div class="config-section-title">Rarity targets per lot</div>
@@ -422,7 +436,7 @@ input:checked+.slider-t:before{background:var(--surface);transform:translateX(18
     <div class="prog-wrap"><div class="prog-fill" id="prog-fill" style="width:0%"></div></div>
     <div class="done-bar" id="done-bar">All cards pulled — ready to list!</div>
     <div class="pull-wrap">
-      <div class="pull-head-row"><span></span><span>Card · Lot</span><span style="text-align:right">Rarity</span></div>
+      <div class="pull-head-row"><span></span><span># · Card · Lot</span><span style="text-align:right">Rarity</span><span style="text-align:right">Missing?</span></div>
       <div class="pull-scroll" id="pull-body"></div>
     </div>
   </div>
@@ -445,6 +459,13 @@ const LC=[
 function lc(i){return LC[i%LC.length];}
 
 let cards=[],lots=[],pullRows=[],excl=new Set(),invSet=new Set(),hasInv=false,maxDup=1,lotType='standard',pullSort='lot';
+// Pull progress tracked by scan index (survives substitutions & re-sorts).
+let pulledScans=new Set();
+let identicalLots=false; // when on, build K identical lots packed from highest-qty cards
+// Global name normalizer — same card across sets always matches. Strips
+// the back face of DFCs so reprints with differing name formats still
+// count as duplicates. Used by build(), computeMaxLots() and notFound().
+const nameKey=n=>(n||'').toLowerCase().split('//')[0].trim().replace(/\s+/g,' ');
 
 function setPullSort(s){
   pullSort=s;
@@ -489,9 +510,9 @@ function setDup(n){
     if(el)el.classList.toggle('active',v===n);
   });
   const desc=document.getElementById('dup-desc');
-  if(n===0)desc.textContent='No same-name duplicates per lot (cross-set blocked)';
+  if(n===0)desc.textContent='Any number of copies of the same card per lot';
   else if(n===1)desc.textContent='No duplicates — max 1 copy per lot';
-  else desc.textContent=`Max ${n} copies of the same card per lot`;
+  else desc.textContent=`Up to ${n} copies of the same card per lot`;
   updateNote();
   scheduleSave();
 }
@@ -503,6 +524,16 @@ tcgToggle.addEventListener('change',()=>{
   if(!tcgToggle.checked){invSet=new Set();hasInv=false;document.getElementById('dz-inv').className='upload-zone';document.getElementById('lbl-inv').textContent='';document.getElementById('fi-inv').value='';}
   if(cards.length)reTag();
 });
+
+const identToggle=document.getElementById('ident-toggle');
+identToggle.addEventListener('change',()=>{setIdentical(identToggle.checked);});
+function setIdentical(on){
+  identicalLots=on;
+  const t=document.getElementById('ident-toggle');if(t)t.checked=on;
+  const d=document.getElementById('ident-desc');
+  if(d)d.textContent=on?'On — every lot has the same cards, packed from your highest-quantity stock':'Off — each lot is balanced independently';
+  updateNote();scheduleSave();
+}
 
 function showErr(m){const el=document.getElementById('err-bar');el.textContent=m;el.style.display=m?'block':'none';}
 function sfBar(st,m){
@@ -691,10 +722,10 @@ function filtered(){const pool=cards.filter(c=>c.route==='lot');return excl.size
 // For each rarity tier with target k > 0, we apply the same-name rule.
 // Given names with copy counts c1..cp, the max number of lots N that the
 // tier can supply is the largest N where:
-//     sum over names of min(c_i, N)  >=  N * k
-// (Each name can supply at most one copy to any single lot, so a name
-// with 5 copies can serve at most 5 different lots.) We search N upward
-// from 0 until the inequality fails.
+//     sum over names of min(c_i, N*D)  >=  N * k
+// where D is the max copies of one name allowed per lot (the maxDup
+// setting; unlimited for "Any"). With D=1 a name serves at most one copy
+// per lot; with D=2 it can fill two slots in the same lot, and so on.
 //
 // The fill tier accepts ANY rarity, so for it we use the combined pool's
 // uniqueness across the whole filtered set.
@@ -708,9 +739,6 @@ function computeMaxLots(){
         rfill=parseInt(document.getElementById('r-fill').value)||0;
   const cpl=rm+rr+ru+rc+rfill;
   if(cpl===0)return{n:0,bottleneck:null};
-
-  // Same name normalizer used by build()
-  const nameKey=n=>(n||'').toLowerCase().split('//')[0].trim().replace(/\s+/g,' ');
 
   // Get copy counts per unique name within a rarity (or the full pool).
   function counts(filterFn){
@@ -727,11 +755,15 @@ function computeMaxLots(){
   function maxLotsFor(copies,k){
     if(k<=0)return Infinity;
     if(!copies.length)return 0;
+    // D = how many copies of one name may sit in a single lot (the maxDup
+    // setting; "Any" => unlimited). A name with c copies can therefore
+    // serve at most min(c, N*D) of the N lots' demand for this tier.
+    const D=maxDup===0?Infinity:maxDup;
     const total=copies.reduce((a,b)=>a+b,0);
     let lo=0,hi=Math.floor(total/k);
     while(lo<hi){
       const mid=Math.ceil((lo+hi+1)/2);
-      let supply=0;for(const c of copies){supply+=Math.min(c,mid);if(supply>=mid*k)break;}
+      let supply=0;for(const c of copies){supply+=Math.min(c,mid*D);if(supply>=mid*k)break;}
       if(supply>=mid*k)lo=mid;else hi=mid-1;
     }
     return lo;
@@ -768,17 +800,16 @@ function updateNote(){
   // Same-name aware warnings: if there aren't enough UNIQUE names in a
   // tier to fill nl lots without dupes, flag it (this is what catches
   // the "102 unassigned" problem when popular reprints saturate every lot).
-  const nameKey=n=>(n||'').toLowerCase().split('//')[0].trim().replace(/\s+/g,' ');
   const uniqInTier=k=>new Set(f.filter(c=>rarKey(c.rarity)===k).map(c=>nameKey(c.name))).size;
   const warnings=[];
   if(rm*nl>avail.m)warnings.push(`Need ${rm*nl} mythics, have ${avail.m}`);
-  else if(rm>0&&uniqInTier('m')<rm*nl&&rm*nl>uniqInTier('m'))warnings.push(`Only ${uniqInTier('m')} unique mythic names — need ${rm*nl} for no-dupe lots`);
+  else if(maxDup===1&&rm>0&&uniqInTier('m')<rm*nl)warnings.push(`Only ${uniqInTier('m')} unique mythic names — need ${rm*nl} for no-dupe lots`);
   if(rr*nl>avail.r)warnings.push(`Need ${rr*nl} rares, have ${avail.r}`);
-  else if(rr>0&&uniqInTier('r')<rr*nl)warnings.push(`Only ${uniqInTier('r')} unique rare names — need ${rr*nl} for no-dupe lots`);
+  else if(maxDup===1&&rr>0&&uniqInTier('r')<rr*nl)warnings.push(`Only ${uniqInTier('r')} unique rare names — need ${rr*nl} for no-dupe lots`);
   if(ru*nl>avail.u)warnings.push(`Need ${ru*nl} uncommons, have ${avail.u}`);
-  else if(ru>0&&uniqInTier('u')<ru*nl)warnings.push(`Only ${uniqInTier('u')} unique uncommon names — need ${ru*nl} for no-dupe lots`);
+  else if(maxDup===1&&ru>0&&uniqInTier('u')<ru*nl)warnings.push(`Only ${uniqInTier('u')} unique uncommon names — need ${ru*nl} for no-dupe lots`);
   if(rc*nl>avail.c)warnings.push(`Need ${rc*nl} commons, have ${avail.c}`);
-  else if(rc>0&&uniqInTier('c')<rc*nl)warnings.push(`Only ${uniqInTier('c')} unique common names — need ${rc*nl} for no-dupe lots`);
+  else if(maxDup===1&&rc>0&&uniqInTier('c')<rc*nl)warnings.push(`Only ${uniqInTier('c')} unique common names — need ${rc*nl} for no-dupe lots`);
   if(warnings.length){warn.textContent='⚠ '+warnings.join(' · ');warn.style.display='block';}
   if(cpl>0){
     document.getElementById('est-preview').style.display='block';
@@ -802,14 +833,24 @@ function updateNote(){
       maxBtn.style.display='none';
     }
   }
-  const dupLabel=maxDup===0?'no same-name dupes':maxDup===1?'no dupes':`max ${maxDup} same name`;
-  let note=`${nl} lot(s) × ${cpl} cards · ${dupLabel}`;
+  const dupLabel=maxDup===0?'unlimited dupes':maxDup===1?'no dupes':`max ${maxDup} per name`;
+  let note=identicalLots?`${nl} identical lot(s) × up to ${cpl} cards · ${dupLabel}`:`${nl} lot(s) × ${cpl} cards · ${dupLabel}`;
   if(vmin>0||vmax>0)note+=` · value target $${vmin.toFixed(2)}–$${vmax.toFixed(2)}`;
   document.getElementById('cfg-note').textContent=note+'.';
 }
 document.getElementById('nl').addEventListener('input',updateNote);
 
+// Rebuild the pull-sheet rows (one row per physical card, keyed by scan
+// index) from the current lots. Extracted so build() and notFound() share
+// identical logic.
+function rebuildPullRows(){
+  const sm={};
+  lots.forEach((lot,li)=>lot.forEach(c=>{if(!sm[c.scanIdx])sm[c.scanIdx]={card:c,lotNums:[]};sm[c.scanIdx].lotNums.push(li+1);}));
+  pullRows=Object.values(sm).sort((a,b)=>a.card.scanIdx-b.card.scanIdx);
+}
+
 function build(){
+  if(identicalLots){buildIdentical();return;}
   const pool=filtered();
   const nl=Math.max(1,parseInt(document.getElementById('nl').value)||5);
   const rm=parseInt(document.getElementById('r-m').value)||0,rr=parseInt(document.getElementById('r-r').value)||0,ru=parseInt(document.getElementById('r-u').value)||0,rc=parseInt(document.getElementById('r-c').value)||0,rfill=parseInt(document.getElementById('r-fill').value)||0;
@@ -826,19 +867,15 @@ function build(){
   const used=new Set(),lotArrays=Array.from({length:nl},()=>[]);
   const copiesPerLot=Array.from({length:nl},()=>({}));
 
-  // Normalize names so the same card from different sets always matches:
-  // lowercase, trim, collapse whitespace, and strip the back face of
-  // double-faced cards (e.g. "Delver of Secrets // Insectile Aberration"
-  // -> "delver of secrets") so reprints with differing name formats still
-  // count as duplicates.
-  const nameKey=n=>(n||'').toLowerCase().split('//')[0].trim().replace(/\s+/g,' ');
   function canAdd(li,name){
-    // Hard rule: a single lot can never contain two cards with the same
-    // name, even if they're from different sets. Same name = duplicate,
-    // regardless of the maxDup setting.
+    // The "Max copies of same card per lot" setting controls this:
+    //   1   -> at most 1 copy (no duplicates)
+    //   2-4 -> at most that many copies of the same name in one lot
+    //   0   -> "Any" (unlimited copies of the same name per lot)
+    // Name matching is cross-set: same name = same card regardless of
+    // which set it's from.
     const k=nameKey(name);
-    if((copiesPerLot[li][k]||0)>=1)return false;
-    if(maxDup===0)return true;
+    if(maxDup===0)return true; // "Any" = unlimited
     return(copiesPerLot[li][k]||0)<maxDup;
   }
   function doAdd(li,card){
@@ -854,12 +891,6 @@ function build(){
   // lot that currently has the FEWEST cards of this card's color/type
   // bucket — so colors and types spread evenly across lots. Tiebreak by
   // total tier-fill (round-robin balance), then by lot index.
-  //
-  // The previous "for each lot, fill it up" loop greedily consumed
-  // popular reprints for early lots, leaving later lots starved. The
-  // card-first approach distributes singletons and balances both size
-  // and value; the color tiebreak ensures bulk lots get a good mix of
-  // W/U/B/R/G/artifacts/lands rather than an accidental color glut.
   const lotBuckets=Array.from({length:nl},()=>({}));
   function assignToBest(card,filledArr,target){
     const bucket=colorBucket(card);
@@ -899,10 +930,16 @@ function build(){
 
   lotArrays.forEach(lot=>lot.sort((a,b)=>a.scanIdx-b.scanIdx));
   lots=lotArrays.filter(l=>l.length>0);
-  const sm={};lots.forEach((lot,li)=>lot.forEach(c=>{if(!sm[c.scanIdx])sm[c.scanIdx]={card:c,lotNums:[]};sm[c.scanIdx].lotNums.push(li+1);}));
-  pullRows=Object.values(sm).sort((a,b)=>a.card.scanIdx-b.card.scanIdx);
   const skipped=pool.filter(c=>!used.has(c.scanIdx)).length;
-  const sk=document.getElementById('skip-bar');sk.textContent=skipped?`${skipped} card(s) not assigned.`:'';sk.style.display=skipped?'block':'none';
+  finishBuild(skipped?`${skipped} card(s) not assigned.`:'',useValFilter,vmin,vmax);
+}
+
+// Shared finisher for both build paths: reset progress, rebuild pull rows,
+// render, and reveal the results panel.
+function finishBuild(skipMsg,useValFilter,vmin,vmax){
+  pulledScans=new Set(); // fresh build clears prior pull progress
+  rebuildPullRows();
+  const sk=document.getElementById('skip-bar');sk.textContent=skipMsg||'';sk.style.display=skipMsg?'block':'none';
   renderPull();renderLots(useValFilter,vmin,vmax);
   document.getElementById('s-lots').style.display='block';
   document.getElementById('s-lots').scrollIntoView({behavior:'smooth',block:'start'});
@@ -910,11 +947,124 @@ function build(){
   scheduleSave();
 }
 
+// ===== Identical (duplicate) lots =====
+// Build K lots with the SAME composition, packing each lot from the cards
+// you have the most copies of. A card with q total copies can appear in
+// every lot up to min(maxDup, floor(q / K)) times — so with "4 per card"
+// and enough stock, your highest-quantity cards land 4-to-a-lot across all
+// lots. Cards with fewer than K copies can't be in every lot, so they're
+// skipped in this mode (kept out rather than breaking the duplication).
+function buildIdentical(){
+  const pool=filtered();
+  const K=Math.max(1,parseInt(document.getElementById('nl').value)||5);
+  const rm=parseInt(document.getElementById('r-m').value)||0,rr=parseInt(document.getElementById('r-r').value)||0,ru=parseInt(document.getElementById('r-u').value)||0,rc=parseInt(document.getElementById('r-c').value)||0,rfill=parseInt(document.getElementById('r-fill').value)||0;
+  const cpl=rm+rr+ru+rc+rfill;if(cpl===0){alert('Set at least 1 card per lot.');return;}
+  const vmin=parseFloat(document.getElementById('v-min').value)||0,vmax=parseFloat(document.getElementById('v-max').value)||0;
+  const useValFilter=vmin>0||vmax>0;
+  const cap1=maxDup===0?Infinity:maxDup; // dup ceiling per lot per name
+
+  // Group physical cards by normalized name — the shared stock we hand out
+  // equally to all K lots.
+  const groups=new Map();
+  for(const c of pool){
+    const k=nameKey(c.name);
+    if(!groups.has(k))groups.set(k,{rk:rarKey(c.rarity),cards:[],used:0});
+    groups.get(k).cards.push(c);
+  }
+  for(const g of groups.values()){g.cards.sort((a,b)=>b.price-a.price);g.qty=g.cards.length;}
+
+  const lotArrays=Array.from({length:K},()=>[]);
+  // perLot copies of group g go into EACH lot (consumes perLot*K distinct cards).
+  function place(g,perLot){
+    for(let lot=0;lot<K;lot++){for(let d=0;d<perLot;d++)lotArrays[lot].push(g.cards[g.used++]);}
+  }
+  const perLotCap=g=>Math.min(cap1,Math.floor((g.qty-g.used)/K)); // copies/lot still giveable
+
+  // One pass per tier: walk groups from highest remaining quantity down,
+  // give each up to its cap and the dup ceiling, without overshooting the
+  // tier's slot target. Single pass keeps variety so the bulkiest card
+  // doesn't swallow a whole lot.
+  function tierFill(filterFn,target){
+    if(target<=0)return;
+    let filled=0;
+    const cands=[...groups.values()].filter(filterFn).sort((a,b)=>(b.qty-b.used)-(a.qty-a.used)||(b.cards[0]?.price||0)-(a.cards[0]?.price||0));
+    for(const g of cands){
+      if(filled>=target)break;
+      const cap=perLotCap(g);
+      if(cap<1)continue;
+      const take=Math.min(cap,target-filled);
+      place(g,take);filled+=take;
+    }
+  }
+  tierFill(g=>g.rk==='m',rm);
+  tierFill(g=>g.rk==='r',rr);
+  tierFill(g=>g.rk==='u',ru);
+  tierFill(g=>g.rk==='c',rc);
+  tierFill(()=>true,rfill); // fill tier: any rarity, remaining stock
+
+  lotArrays.forEach(lot=>lot.sort((a,b)=>a.scanIdx-b.scanIdx));
+  lots=lotArrays.filter(l=>l.length>0);
+
+  const placedPerLot=lots.length?lots[0].length:0;
+  const totalPlaced=lots.reduce((s,l)=>s+l.length,0);
+  const leftover=pool.length-totalPlaced;
+  let msg=`${lots.length} identical lot(s) · ${placedPerLot} cards each.`;
+  if(placedPerLot<cpl)msg+=` Couldn't reach ${cpl}/lot — not enough duplicate stock.`;
+  if(leftover>0)msg+=` ${leftover} card(s) unused (fewer than ${K} copies, or beyond the cap).`;
+  finishBuild(msg,useValFilter,vmin,vmax);
+}
+
+// "Not found" — the physical card at row i can't be located. Swap in a
+// replacement drawn from the import that is NOT already used in any lot.
+// Preference order: same rarity, then closest price (keeps the lot's value
+// stable), and never a name already present in that lot.
+function notFound(i){
+  const row=pullRows[i];if(!row)return;
+  const missing=row.card;
+  const li=(row.lotNums[0]||1)-1;
+  const lot=lots[li];if(!lot)return;
+  const used=new Set();lots.forEach(l=>l.forEach(c=>used.add(c.scanIdx)));
+  // Count names already in the lot, minus the card we're removing, so the
+  // replacement respects the same maxDup cap that build() uses.
+  const lotNameCounts={};
+  lot.forEach(c=>{if(c.scanIdx===missing.scanIdx)return;const k=nameKey(c.name);lotNameCounts[k]=(lotNameCounts[k]||0)+1;});
+  const nameAllowed=k=>maxDup===0||(lotNameCounts[k]||0)<maxDup;
+  // Eligible = lot-routed, not already used anywhere, name not over the
+  // dup cap for this lot, and not in an excluded set (matches build()).
+  const eligible=cards.filter(c=>c.route==='lot'&&!used.has(c.scanIdx)&&nameAllowed(nameKey(c.name))&&(excl.size===0||!excl.has(c.setCode||'Unknown')));
+  let pool=eligible.filter(c=>rarKey(c.rarity)===rarKey(missing.rarity));
+  let fellBack=false;
+  if(!pool.length){pool=eligible;fellBack=true;} // no same-rarity card left
+  if(!pool.length){
+    alert(`No replacement available for "${missing.name}".\n\nEvery other card in the import is already used in a lot, excluded by your set filter, or shares a name with a card already in Lot ${String(li+1).padStart(2,'0')}.`);
+    return;
+  }
+  pool.sort((a,b)=>Math.abs(a.price-missing.price)-Math.abs(b.price-missing.price));
+  const sub=pool[0];
+  const idx=lot.findIndex(c=>c.scanIdx===missing.scanIdx);
+  if(idx>=0)lot[idx]=sub;else lot.push(sub);
+  lot.sort((a,b)=>a.scanIdx-b.scanIdx);
+  pulledScans.delete(missing.scanIdx); // missing card is gone; sub starts unpulled
+  rebuildPullRows();
+  renderPull();
+  const vmin=parseFloat(document.getElementById('v-min').value)||0,vmax=parseFloat(document.getElementById('v-max').value)||0;
+  renderLots(vmin>0||vmax>0,vmin,vmax);
+  flashSub(sub.scanIdx);
+  scheduleSave();
+}
+// Briefly highlight a freshly substituted card and scroll it into view.
+function flashSub(scanIdx){
+  const idx=pullRows.findIndex(r=>r.card.scanIdx===scanIdx);
+  if(idx<0)return;
+  const el=document.getElementById('pr-'+idx);
+  if(el){el.classList.add('subbed');el.scrollIntoView({behavior:'smooth',block:'center'});setTimeout(()=>el.classList.remove('subbed'),1600);}
+}
+
 function renderPull(){
   // Build display order. We keep pullRows itself in scan order so that
   // the per-row index `i` is stable — that way the DOM ids `cb-i`/`pr-i`
   // don't shift when the user toggles sort modes, and pull progress
-  // tracked by check button is preserved across re-renders.
+  // (tracked in pulledScans by scan index) is preserved across re-renders.
   const indexed=pullRows.map((row,i)=>({row,i}));
   if(pullSort==='lot'){
     indexed.sort((a,b)=>{
@@ -923,9 +1073,10 @@ function renderPull(){
       return a.row.card.scanIdx-b.row.card.scanIdx;
     });
   }
-  let lastLot=null;
+  let lastLot=null,pullNum=0;
   document.getElementById('pull-body').innerHTML=indexed.map(({row,i})=>{
     const c=row.card,firstLot=row.lotNums[0],borderColor=lc(firstLot-1).tx;
+    pullNum++;
     let divider='';
     if(pullSort==='lot'&&firstLot!==lastLot){
       const col=lc(firstLot-1),lotSize=lots[firstLot-1]?lots[firstLot-1].length:0;
@@ -933,10 +1084,11 @@ function renderPull(){
     }
     lastLot=firstLot;
     const chips=row.lotNums.map(n=>{const col=lc(n-1);return`<span class="lot-pill" style="background:${col.bg};color:${col.tx}">Lot ${n}</span>`;}).join('');
-    return divider+`<div class="pull-card-row" id="pr-${i}" style="border-left-color:${borderColor}" onclick="tog(${i})">
-      <div class="pull-check-cell"><button class="check-btn" id="cb-${i}" onclick="event.stopPropagation();tog(${i})"></button></div>
+    const isPulled=pulledScans.has(c.scanIdx);
+    return divider+`<div class="pull-card-row${isPulled?' done':''}" id="pr-${i}" style="border-left-color:${borderColor}" onclick="tog(${i})">
+      <div class="pull-check-cell"><button class="check-btn${isPulled?' checked':''}" id="cb-${i}" onclick="event.stopPropagation();tog(${i})"></button></div>
       <div class="pull-main-cell">
-        <div class="pull-name-row"><span class="pull-name">${c.name}</span>${chips}</div>
+        <div class="pull-name-row"><span class="pull-num">${pullNum}.</span><span class="pull-name">${c.name}</span>${chips}</div>
         <div class="pull-meta-row">
           <span class="pull-scan">#${c.scanIdx}</span>
           <span class="pull-set">${c.setCode||c.setName||'—'}</span>
@@ -944,13 +1096,32 @@ function renderPull(){
         </div>
       </div>
       <div class="pull-rar-cell">${rarBadgeMd(c.rarity)}</div>
+      <div class="pull-action-cell"><button class="swap-btn" onclick="event.stopPropagation();notFound(${i})" title="Card missing — swap in another unused card from the import (same rarity, closest price)">Not found</button></div>
     </div>`;
   }).join('');
   updateProg();
 }
-function tog(i){const row=document.getElementById('pr-'+i),btn=document.getElementById('cb-'+i);btn.classList.toggle('checked');row.classList.toggle('done',btn.classList.contains('checked'));updateProg();scheduleSave();}
-function updateProg(){const total=pullRows.length,done=document.querySelectorAll('.check-btn.checked').length;document.getElementById('prog-lbl').textContent=`${done} of ${total} pulled`;document.getElementById('prog-fill').style.width=total?Math.round(done/total*100)+'%':'0%';document.getElementById('done-bar').style.display=(done>0&&done===total)?'block':'none';}
-function resetChecks(){document.querySelectorAll('.check-btn').forEach(b=>b.classList.remove('checked'));document.querySelectorAll('.pull-card-row').forEach(r=>r.classList.remove('done'));updateProg();scheduleSave();}
+function tog(i){
+  const row=document.getElementById('pr-'+i),btn=document.getElementById('cb-'+i);
+  const sx=pullRows[i]&&pullRows[i].card.scanIdx;
+  btn.classList.toggle('checked');
+  const on=btn.classList.contains('checked');
+  row.classList.toggle('done',on);
+  if(sx!=null){if(on)pulledScans.add(sx);else pulledScans.delete(sx);}
+  updateProg();scheduleSave();
+}
+function updateProg(){
+  const total=pullRows.length,done=pullRows.filter(r=>pulledScans.has(r.card.scanIdx)).length;
+  document.getElementById('prog-lbl').textContent=`${done} of ${total} pulled`;
+  document.getElementById('prog-fill').style.width=total?Math.round(done/total*100)+'%':'0%';
+  document.getElementById('done-bar').style.display=(done>0&&done===total)?'block':'none';
+}
+function resetChecks(){
+  pulledScans=new Set();
+  document.querySelectorAll('.check-btn').forEach(b=>b.classList.remove('checked'));
+  document.querySelectorAll('.pull-card-row').forEach(r=>r.classList.remove('done'));
+  updateProg();scheduleSave();
+}
 
 function renderLots(useValFilter,vmin,vmax){
   const maxVal=Math.max(...lots.map(l=>l.reduce((s,c)=>s+c.price,0)),0.01);
@@ -982,16 +1153,18 @@ function expPull(){
       return a.card.scanIdx-b.card.scanIdx;
     });
   }
-  dl([['Scan #','Name','Card #','Set','Set Code','Rarity','Condition','Lot(s)','Price'],...ordered.map(r=>[r.card.scanIdx,r.card.name,r.card.cardNum,r.card.setName,r.card.setCode,r.card.rarity,r.card.condition,r.lotNums.map(n=>'Lot '+n).join(' + '),r.card.price>0?r.card.price.toFixed(2):''])],'pull_sheet.csv');
+  dl([['Pull #','Scan #','Name','Card #','Set','Set Code','Rarity','Condition','Lot(s)','Price'],...ordered.map((r,idx)=>[idx+1,r.card.scanIdx,r.card.name,r.card.cardNum,r.card.setName,r.card.setCode,r.card.rarity,r.card.condition,r.lotNums.map(n=>'Lot '+n).join(' + '),r.card.price>0?r.card.price.toFixed(2):''])],'pull_sheet.csv');
 }
 function expLots(){dl([['Lot','Scan #','Name','Card #','Set','Set Code','Rarity','Condition','Price'],...lots.flatMap((lot,i)=>lot.map(c=>[i+1,c.scanIdx,c.name,c.cardNum,c.setName,c.setCode,c.rarity,c.condition,c.price>0?c.price.toFixed(2):'']))],'tcg_lots.csv');}
 function copySum(){navigator.clipboard.writeText(lots.map((lot,i)=>{const v=lot.reduce((s,c)=>s+c.price,0);return`Lot ${i+1} (${lot.length} cards, $${v.toFixed(2)}): `+lot.map(c=>`#${c.scanIdx} ${c.name}${c.setCode?' ['+c.setCode+']':''}`).join(', ');}).join('\n'));}
 function clearAll(){
-  cards=[];lots=[];pullRows=[];excl=new Set();invSet=new Set();hasInv=false;lotType='standard';
+  cards=[];lots=[];pullRows=[];excl=new Set();invSet=new Set();hasInv=false;lotType='standard';pulledScans=new Set();identicalLots=false;
   ['standard','rare','bulk'].forEach(k=>{
     const el=document.getElementById('lt-'+k);
     if(el)el.classList.toggle('active',k==='standard');
   });
+  const it=document.getElementById('ident-toggle');if(it)it.checked=false;
+  const idd=document.getElementById('ident-desc');if(idd)idd.textContent='Off — each lot is balanced independently';
   ['s-cards','s-config','s-lots','s-singles'].forEach(id=>document.getElementById(id).style.display='none');
   document.getElementById('split-banner').style.display='none';document.getElementById('set-filter').style.display='none';document.getElementById('est-preview').style.display='none';
   document.getElementById('lbl-scan').textContent='';document.getElementById('lbl-inv').textContent='';
@@ -1004,7 +1177,7 @@ function clearAll(){
 }
 
 // ============ Session persistence (localStorage) ============
-const SK='lotmaker_session_v1';
+const SK='lotmaker_session_v2';
 let saveT=null,flashT=null;
 
 function scheduleSave(){clearTimeout(saveT);saveT=setTimeout(saveState,600);}
@@ -1012,13 +1185,11 @@ function scheduleSave(){clearTimeout(saveT);saveT=setTimeout(saveState,600);}
 function saveState(){
   if(!cards.length){return;}
   try{
-    const checked=[];
-    document.querySelectorAll('.check-btn').forEach((b,i)=>{if(b.classList.contains('checked'))checked.push(i);});
     const gv=id=>{const el=document.getElementById(id);return el?el.value:'';};
     const state={
-      v:1,savedAt:Date.now(),
+      v:2,savedAt:Date.now(),
       cards,lots,pullRows,
-      excl:[...excl],invSet:[...invSet],hasInv,maxDup,lotType,pullSort,
+      excl:[...excl],invSet:[...invSet],hasInv,maxDup,lotType,pullSort,identical:identicalLots,
       rm:gv('r-m'),rr:gv('r-r'),ru:gv('r-u'),rc:gv('r-c'),rfill:gv('r-fill'),
       vmin:gv('v-min'),vmax:gv('v-max'),nl:gv('nl'),threshold:gv('threshold'),
       tcgEnabled:document.getElementById('tcg-toggle').checked,
@@ -1030,7 +1201,7 @@ function saveState(){
       },
       scanLabel:document.getElementById('lbl-scan').textContent,
       invLabel:document.getElementById('lbl-inv').textContent,
-      pulled:checked,
+      pulled:[...pulledScans], // now stored as scan indices
       activeTab:document.getElementById('tp-pull').classList.contains('active')?'pull':'lots',
     };
     localStorage.setItem(SK,JSON.stringify(state));
@@ -1043,7 +1214,7 @@ function loadState(){
     const raw=localStorage.getItem(SK);
     if(!raw)return null;
     const s=JSON.parse(raw);
-    if(s.v!==1||!Array.isArray(s.cards)||!s.cards.length)return null;
+    if(s.v!==2||!Array.isArray(s.cards)||!s.cards.length)return null;
     return s;
   }catch(e){return null;}
 }
@@ -1071,6 +1242,8 @@ function restoreState(s){
   cards=s.cards||[];lots=s.lots||[];pullRows=s.pullRows||[];
   excl=new Set(s.excl||[]);invSet=new Set(s.invSet||[]);
   hasInv=!!s.hasInv;maxDup=s.maxDup??1;
+  pulledScans=new Set(s.pulled||[]); // scan indices
+  setIdentical(!!s.identical);
   if(s.pullSort){setPullSort(s.pullSort);}
   if(s.lotType){
     lotType=s.lotType;
@@ -1101,19 +1274,11 @@ function restoreState(s){
     if(s.panels.singles)document.getElementById('s-singles').style.display='block';
     if(s.panels.lots&&lots.length){
       document.getElementById('s-lots').style.display='block';
-      renderPull();
+      renderPull(); // paints checked state from pulledScans directly
       const vmin=parseFloat(s.vmin)||0,vmax=parseFloat(s.vmax)||0;
       renderLots(vmin>0||vmax>0,vmin,vmax);
       doTab(s.activeTab||'pull');
-      if(s.pulled&&s.pulled.length){
-        s.pulled.forEach(i=>{
-          const btn=document.getElementById('cb-'+i);
-          const row=document.getElementById('pr-'+i);
-          if(btn)btn.classList.add('checked');
-          if(row)row.classList.add('done');
-        });
-        updateProg();
-      }
+      updateProg();
     }
   }
   updateNote();
